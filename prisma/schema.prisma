@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7 project setup uses prisma.config.ts for database connection.
+}
+
+// Student Information Table
+model Student {
+  id        String    @id @default(uuid())
+  studentId String    @unique
+  name      String
+  email     String?   @unique
+  attempts  Attempt[]
+  createdAt DateTime  @default(now())
+}
+
+// Clinical Scenarios
+model Scenario {
+  id          String @id @default(uuid())
+  title       String
+  bodySystem  String
+  description String
+
+  // Scenario-level evaluation data.
+  // Kept for backward compatibility with the current Phase 1 and Phase 2 flow.
+  rubric           String?
+  requiredKeywords String[] @default([])
+  optionalKeywords String[] @default([])
+  modelAnswer      String?
+
+  // Scenario-level concept groups.
+  // Each group represents one clinical concept and may contain Thai, English, or mixed keywords.
+  requiredKeywordGroups Json?
+  optionalKeywordGroups Json?
+
+  steps     ScenarioStep[]
+  attempts  Attempt[]
+  createdAt DateTime       @default(now())
+}
+
+// Individual steps inside a clinical scenario
+model ScenarioStep {
+  id         String @id @default(uuid())
+  scenarioId String
+
+  order  Int
+  title  String
+  prompt String
+
+  // Step-level evaluation data.
+  // This supports multi-step clinical scenario assessment.
+  rubric           String?
+  requiredKeywords String[] @default([])
+  optionalKeywords String[] @default([])
+  modelAnswer      String?
+
+  // Step-level concept groups.
+  // Each group represents one required clinical concept for this step.
+  requiredKeywordGroups Json?
+  optionalKeywordGroups Json?
+
+  attemptSteps AttemptStep[]
+  createdAt    DateTime      @default(now())
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@unique([scenarioId, order])
+}
+
+// Tracking student assessment attempts and scores
+model Attempt {
+  id         String @id @default(uuid())
+  studentId  String
+  scenarioId String
+
+  // Student Responses
+  primaryDiagnosis String?
+  interventions    String?
+
+  // AI Evaluation Results
+  aiScore           String?
+  aiReasoning       String?
+  aiMissingElements String[] @default([])
+  aiStatus          String   @default("pending") // pending, completed, failed
+
+  preTestScore  Int?
+  postTestScore Int?
+  isCompleted   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  attemptSteps AttemptStep[]
+
+  student  Student  @relation(fields: [studentId], references: [id])
+  scenario Scenario @relation(fields: [scenarioId], references: [id])
+}
+
+// Student response and evaluation result for each scenario step
+model AttemptStep {
+  id             String @id @default(uuid())
+  attemptId      String
+  scenarioStepId String
+
+  answer String?
+
+  aiScore           String?
+  aiReasoning       String?
+  aiMissingElements String[] @default([])
+  aiStatus          String   @default("pending") // pending, completed, failed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempt      Attempt      @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  scenarioStep ScenarioStep @relation(fields: [scenarioStepId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, scenarioStepId])
+}

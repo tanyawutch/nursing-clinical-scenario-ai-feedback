@@ -49,6 +49,41 @@ type WindowWithSpeechRecognition = Window & {
   webkitSpeechRecognition?: SpeechRecognitionConstructor
 }
 
+function LoadingSpinner() {
+  return (
+    <span
+      className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
+      aria-hidden="true"
+    />
+  )
+}
+
+function MicrophoneIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 14.5a3 3 0 0 0 3-3v-5a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18.5 11.5a6.5 6.5 0 0 1-13 0M12 18v3M9 21h6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 function SubmitButton() {
   const { pending } = useFormStatus()
 
@@ -56,13 +91,16 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className={`rounded-md px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors ${
-        pending
-          ? 'cursor-not-allowed bg-slate-400'
-          : 'bg-[#aa1e2d] hover:bg-[#8a1824]'
-      }`}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#8C1515] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#741111] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
     >
-      {pending ? 'Submitting...' : 'Submit Assessment'}
+      {pending ? (
+        <>
+          <LoadingSpinner />
+          Evaluating response...
+        </>
+      ) : (
+        'Submit Assessment'
+      )}
     </button>
   )
 }
@@ -81,7 +119,11 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
   const [diagnosis, setDiagnosis] = useState('')
   const [interventions, setInterventions] = useState('')
   const [isRecordingDiagnosis, setIsRecordingDiagnosis] = useState(false)
-  const [isRecordingInterventions, setIsRecordingInterventions] = useState(false)
+  const [isRecordingInterventions, setIsRecordingInterventions] =
+    useState(false)
+  const [speechError, setSpeechError] = useState<string | null>(null)
+
+  const isRecording = isRecordingDiagnosis || isRecordingInterventions
 
   const stopRecordingState = (field: SpeechField) => {
     if (field === 'diagnosis') {
@@ -94,11 +136,15 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
   }
 
   const startRecording = (field: SpeechField) => {
+    setSpeechError(null)
+
     const speechWindow = window as WindowWithSpeechRecognition
     const SpeechRecognition = speechWindow.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      alert('Your browser does not support voice input. Please use Chrome.')
+      setSpeechError(
+        'Voice input is not supported in this browser. Please use Chrome or type your response manually.'
+      )
       return
     }
 
@@ -132,6 +178,11 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
 
     recognition.onerror = (event) => {
       console.error('Speech recognition error:', event.error)
+
+      setSpeechError(
+        'Voice input could not be completed. Please check microphone permission or type your response manually.'
+      )
+
       stopRecordingState(field)
     }
 
@@ -139,86 +190,170 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
       stopRecordingState(field)
     }
 
-    recognition.start()
+    try {
+      recognition.start()
+    } catch (error) {
+      console.error('Speech recognition start error:', error)
+
+      setSpeechError(
+        'Voice input could not start. Please try again or type your response manually.'
+      )
+
+      stopRecordingState(field)
+    }
   }
 
   return (
-    <form action={submitAssessment} className="space-y-6">
+    <form
+      action={submitAssessment}
+      className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+    >
       <input type="hidden" name="scenarioId" value={scenarioId} />
 
-      <div>
-        <label
-          htmlFor="primaryDiagnosis"
-          className="mb-2 block text-sm font-semibold text-slate-700"
-        >
-          1. What is your primary nursing diagnosis?
-        </label>
+      <div className="rounded-xl border border-[#C8963C]/30 bg-[#FDF3E3] px-4 py-3">
+        <p className="text-sm font-semibold text-[#8C1515]">
+          Student Response
+        </p>
+        <p className="mt-1 text-sm leading-6 text-slate-700">
+          Answer in Thai, English, or mixed Thai-English. Focus on the main
+          nursing diagnosis and immediate nursing interventions for this
+          patient.
+        </p>
+      </div>
 
-        <div className="relative">
-          <textarea
-            id="primaryDiagnosis"
-            name="primaryDiagnosis"
-            rows={3}
-            value={diagnosis}
-            onChange={(event) => setDiagnosis(event.target.value)}
-            placeholder="Type your diagnosis here or use voice input..."
-            required
-            className="block w-full resize-none rounded-md border border-slate-300 px-4 py-3 pr-12 text-slate-900 shadow-sm outline-none transition-all focus:border-[#aa1e2d] focus:ring-1 focus:ring-[#aa1e2d] sm:text-sm"
-          />
+      <div className="grid gap-5">
+        <div className="rounded-xl border border-slate-200 bg-[#f8f6f3] p-4">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <label
+                htmlFor="primaryDiagnosis"
+                className="block text-sm font-semibold text-slate-900"
+              >
+                1. What is your primary nursing diagnosis?
+              </label>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                State the likely nursing problem based on the patient
+                presentation.
+              </p>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => startRecording('diagnosis')}
-            disabled={isRecordingDiagnosis || isRecordingInterventions}
-            className={`absolute bottom-3 right-3 rounded-full p-2 transition-colors ${
-              isRecordingDiagnosis
-                ? 'animate-pulse bg-red-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50'
-            }`}
-            title="Start voice input for diagnosis"
-          >
-            🎤
-          </button>
+            <span className="rounded-full border border-[#C8963C]/40 bg-white px-3 py-1 text-xs font-semibold text-[#8C1515]">
+              Required
+            </span>
+          </div>
+
+          <div className="relative">
+            <textarea
+              id="primaryDiagnosis"
+              name="primaryDiagnosis"
+              rows={4}
+              value={diagnosis}
+              onChange={(event) => setDiagnosis(event.target.value)}
+              placeholder="Type your diagnosis here or use voice input..."
+              required
+              className="block w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 pr-14 text-sm leading-6 text-slate-900 outline-none transition focus:border-[#8C1515] focus:ring-2 focus:ring-[#8C1515]/15"
+            />
+
+            <button
+              type="button"
+              onClick={() => startRecording('diagnosis')}
+              disabled={isRecording}
+              className={`absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+                isRecordingDiagnosis
+                  ? 'animate-pulse border-[#8C1515] bg-[#8C1515] text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-[#C8963C] hover:text-[#8C1515] disabled:cursor-not-allowed disabled:opacity-50'
+              }`}
+              title="Start voice input for diagnosis"
+              aria-label="Start voice input for diagnosis"
+            >
+              <MicrophoneIcon />
+            </button>
+          </div>
+
+          {isRecordingDiagnosis ? (
+            <p className="mt-2 text-xs font-medium text-[#8C1515]">
+              Listening for diagnosis response...
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-[#f8f6f3] p-4">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <label
+                htmlFor="interventions"
+                className="block text-sm font-semibold text-slate-900"
+              >
+                2. Recommended immediate nursing interventions
+              </label>
+              <p className="mt-1 text-xs leading-5 text-slate-600">
+                List immediate nursing actions that should be taken for the
+                patient.
+              </p>
+            </div>
+
+            <span className="rounded-full border border-[#C8963C]/40 bg-white px-3 py-1 text-xs font-semibold text-[#8C1515]">
+              Required
+            </span>
+          </div>
+
+          <div className="relative">
+            <textarea
+              id="interventions"
+              name="interventions"
+              rows={5}
+              value={interventions}
+              onChange={(event) => setInterventions(event.target.value)}
+              placeholder="List your interventions step-by-step or use voice input..."
+              required
+              className="block w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 pr-14 text-sm leading-6 text-slate-900 outline-none transition focus:border-[#8C1515] focus:ring-2 focus:ring-[#8C1515]/15"
+            />
+
+            <button
+              type="button"
+              onClick={() => startRecording('interventions')}
+              disabled={isRecording}
+              className={`absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+                isRecordingInterventions
+                  ? 'animate-pulse border-[#8C1515] bg-[#8C1515] text-white'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-[#C8963C] hover:text-[#8C1515] disabled:cursor-not-allowed disabled:opacity-50'
+              }`}
+              title="Start voice input for interventions"
+              aria-label="Start voice input for interventions"
+            >
+              <MicrophoneIcon />
+            </button>
+          </div>
+
+          {isRecordingInterventions ? (
+            <p className="mt-2 text-xs font-medium text-[#8C1515]">
+              Listening for intervention response...
+            </p>
+          ) : null}
         </div>
       </div>
 
-      <div>
-        <label
-          htmlFor="interventions"
-          className="mb-2 block text-sm font-semibold text-slate-700"
-        >
-          2. Recommended immediate nursing interventions:
-        </label>
-
-        <div className="relative">
-          <textarea
-            id="interventions"
-            name="interventions"
-            rows={4}
-            value={interventions}
-            onChange={(event) => setInterventions(event.target.value)}
-            placeholder="List your interventions step-by-step or use voice input..."
-            required
-            className="block w-full resize-none rounded-md border border-slate-300 px-4 py-3 pr-12 text-slate-900 shadow-sm outline-none transition-all focus:border-[#aa1e2d] focus:ring-1 focus:ring-[#aa1e2d] sm:text-sm"
-          />
-
-          <button
-            type="button"
-            onClick={() => startRecording('interventions')}
-            disabled={isRecordingDiagnosis || isRecordingInterventions}
-            className={`absolute bottom-3 right-3 rounded-full p-2 transition-colors ${
-              isRecordingInterventions
-                ? 'animate-pulse bg-red-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50'
-            }`}
-            title="Start voice input for interventions"
-          >
-            🎤
-          </button>
+      {speechError ? (
+        <div className="rounded-xl border border-amber-200 bg-[#FDF3E3] px-4 py-3 text-sm leading-6 text-amber-900">
+          {speechError}
         </div>
+      ) : null}
+
+      <div className="rounded-xl border border-[#E8F4F1] bg-[#E8F4F1] px-4 py-3">
+        <p className="text-sm font-semibold text-slate-900">
+          AI feedback note
+        </p>
+        <p className="mt-1 text-sm leading-6 text-slate-700">
+          The system will first check key clinical concepts. If the answer needs
+          deeper interpretation, it will use AI semantic feedback.
+        </p>
       </div>
 
-      <div className="flex justify-end pt-4">
+      <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs leading-5 text-slate-500">
+          Submit only after both fields are completed.
+        </p>
+
         <SubmitButton />
       </div>
     </form>

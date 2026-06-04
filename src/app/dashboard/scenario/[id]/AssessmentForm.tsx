@@ -14,21 +14,21 @@ type SpeechRecognitionAlternative = {
   transcript: string
 }
 
-type SpeechRecognitionResult = {
+type AssessmentSpeechRecognitionResult = {
   0: SpeechRecognitionAlternative
 }
 
-type SpeechRecognitionResultList = {
+type AssessmentSpeechRecognitionResultList = {
   length: number
-  item(index: number): SpeechRecognitionResult
-  [index: number]: SpeechRecognitionResult
+  item(index: number): AssessmentSpeechRecognitionResult
+  [index: number]: AssessmentSpeechRecognitionResult
 }
 
-type SpeechRecognitionEvent = {
-  results: SpeechRecognitionResultList
+type AssessmentSpeechRecognitionEvent = {
+  results: AssessmentSpeechRecognitionResultList
 }
 
-type SpeechRecognitionErrorEvent = {
+type AssessmentSpeechRecognitionErrorEvent = {
   error: string
 }
 
@@ -37,8 +37,8 @@ type SpeechRecognitionInstance = {
   interimResults: boolean
   lang: string
   onstart: (() => void) | null
-  onresult: ((event: SpeechRecognitionEvent) => void) | null
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
+  onresult: ((event: AssessmentSpeechRecognitionEvent) => void) | null
+  onerror: ((event: AssessmentSpeechRecognitionErrorEvent) => void) | null
   onend: (() => void) | null
   start: () => void
 }
@@ -105,7 +105,7 @@ function SubmitButton() {
   )
 }
 
-function getTranscriptFromSpeechResults(results: SpeechRecognitionResultList) {
+function getTranscriptFromSpeechResults(results: AssessmentSpeechRecognitionResultList) {
   const transcripts: string[] = []
 
   for (let index = 0; index < results.length; index += 1) {
@@ -148,7 +148,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
       return
     }
 
-    const recognition = new SpeechRecognition()
+    const recognition = new SpeechRecognition() as unknown as SpeechRecognitionInstance
 
     recognition.continuous = false
     recognition.interimResults = true
@@ -164,7 +164,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
       }
     }
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: AssessmentSpeechRecognitionEvent) => {
       const transcript = getTranscriptFromSpeechResults(event.results)
 
       if (field === 'diagnosis') {
@@ -176,7 +176,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
       }
     }
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: AssessmentSpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error)
 
       setSpeechError(

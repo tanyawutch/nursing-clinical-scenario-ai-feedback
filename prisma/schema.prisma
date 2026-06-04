@@ -110,6 +110,12 @@ model AttemptStep {
   aiMissingElements String[] @default([])
   aiStatus          String   @default("pending") // pending, completed, failed
 
+  // Step retry control for SRS FR-AI-03.
+  // A student can retry a step up to 3 times before the model answer is revealed.
+  attemptCount        Int     @default(0)
+  isLocked            Boolean @default(false)
+  modelAnswerRevealed Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

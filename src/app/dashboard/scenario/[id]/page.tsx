@@ -1,15 +1,19 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import AssessmentForm from './AssessmentForm'
+import ScenarioStepPractice from './ScenarioStepPractice'
 import prisma from '@/utils/prisma'
 import { createClient } from '@/utils/supabase/server'
 
 export default async function AssessmentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ attemptId?: string; stepId?: string }>
 }) {
   const resolvedParams = await params
+  const resolvedSearchParams = await searchParams
   const scenarioId = resolvedParams.id
 
   const supabase = await createClient()
@@ -38,6 +42,34 @@ export default async function AssessmentPage({
   if (!scenario) {
     notFound()
   }
+
+  const firstStep = scenario.steps[0] ?? null
+
+  const latestAttemptStep =
+    resolvedSearchParams.attemptId && resolvedSearchParams.stepId
+      ? await prisma.attemptStep.findFirst({
+          where: {
+            attemptId: resolvedSearchParams.attemptId,
+            scenarioStepId: resolvedSearchParams.stepId,
+            attempt: {
+              scenarioId: scenario.id,
+              student: {
+                email: user.email,
+              },
+            },
+          },
+          select: {
+            answer: true,
+            aiScore: true,
+            aiReasoning: true,
+            aiMissingElements: true,
+            aiStatus: true,
+            attemptCount: true,
+            isLocked: true,
+            modelAnswerRevealed: true,
+          },
+        })
+      : null
 
   return (
     <div className="min-h-screen bg-[#f8f6f3] pb-12 font-sans text-slate-900">
@@ -101,7 +133,7 @@ export default async function AssessmentPage({
               </div>
             </div>
 
-            <aside className="border-t border-slate-200 bg-[#E8F4F1] p-6 lg:border-l lg:border-t-0 sm:p-8">
+            <aside className="border-t border-slate-200 bg-[#E8F4F1] p-6 sm:p-8 lg:border-l lg:border-t-0">
               <h2 className="text-sm font-bold uppercase tracking-wide text-[#8C1515]">
                 Evaluation Support
               </h2>
@@ -118,7 +150,7 @@ export default async function AssessmentPage({
                   Current learning mode
                 </p>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Final assessment form with database-backed AI feedback.
+                  Step-by-step practice with final assessment support.
                 </p>
               </div>
             </aside>
@@ -138,9 +170,8 @@ export default async function AssessmentPage({
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
                 These steps represent the intended clinical reasoning path for
-                this case. The current assessment is submitted as one final
-                response, while the architecture remains ready for step-by-step
-                learning.
+                this case. Step-by-step practice is introduced carefully while
+                keeping the final assessment form available.
               </p>
             </div>
 
@@ -156,11 +187,11 @@ export default async function AssessmentPage({
                 style={{
                   gridTemplateColumns: `repeat(${Math.min(
                     scenario.steps.length,
-                    10,
+                    11,
                   )}, minmax(0, 1fr))`,
                 }}
               >
-                {scenario.steps.slice(0, 10).map((step) => (
+                {scenario.steps.slice(0, 11).map((step) => (
                   <div
                     key={step.id}
                     className="flex flex-col items-center gap-2"
@@ -205,14 +236,30 @@ export default async function AssessmentPage({
           )}
         </section>
 
+        <ScenarioStepPractice
+          scenarioId={scenario.id}
+          step={
+            firstStep
+              ? {
+                  id: firstStep.id,
+                  order: firstStep.order,
+                  title: firstStep.title,
+                  prompt: firstStep.prompt,
+                  modelAnswer: firstStep.modelAnswer,
+                }
+              : null
+          }
+          latestAttemptStep={latestAttemptStep}
+        />
+
         <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#8C1515]">
-              Student Response
+              Final Assessment
             </p>
 
             <h2 className="mt-2 text-xl font-bold text-slate-950">
-              Submit your assessment
+              Submit your complete assessment
             </h2>
 
             <p className="mt-2 text-sm leading-6 text-slate-600">

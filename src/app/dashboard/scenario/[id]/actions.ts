@@ -9,6 +9,9 @@ import {
   type KeywordGroup,
 } from '@/utils/ruleBasedEvaluator'
 
+const MAX_STEP_ATTEMPTS = 3
+const MAX_STEP_ANSWER_LENGTH = 2000
+
 function parseKeywordGroups(value: unknown): KeywordGroup[] | null {
   if (!Array.isArray(value)) {
     return null
@@ -112,6 +115,334 @@ Do not introduce medical information that is not provided here.
 `
 }
 
+function buildStepRubricContext({
+  scenarioTitle,
+  scenarioDescription,
+  stepTitle,
+  stepPrompt,
+  stepRubric,
+  requiredKeywords,
+  optionalKeywords,
+  requiredKeywordGroups,
+  optionalKeywordGroups,
+  modelAnswer,
+}: {
+  scenarioTitle: string
+  scenarioDescription: string
+  stepTitle: string
+  stepPrompt: string
+  stepRubric: string | null
+  requiredKeywords: string[]
+  optionalKeywords: string[]
+  requiredKeywordGroups: KeywordGroup[] | null
+  optionalKeywordGroups: KeywordGroup[] | null
+  modelAnswer: string | null
+}) {
+  const baseRubric = stepRubric?.trim()
+    ? stepRubric.trim()
+    : 'No written step rubric configured.'
+
+  return `
+Scenario Title:
+${scenarioTitle}
+
+Scenario Description:
+${scenarioDescription}
+
+Current Step:
+${stepTitle}
+
+Step Prompt:
+${stepPrompt}
+
+Step Rubric:
+${baseRubric}
+
+Required Keywords:
+${requiredKeywords.length > 0 ? requiredKeywords.join(', ') : 'No required keywords configured.'}
+
+Optional Keywords:
+${optionalKeywords.length > 0 ? optionalKeywords.join(', ') : 'No optional keywords configured.'}
+
+Required Keyword Groups:
+${formatKeywordGroupsForRubric(requiredKeywordGroups)}
+
+Optional Keyword Groups:
+${formatKeywordGroupsForRubric(optionalKeywordGroups)}
+
+Model Answer:
+${modelAnswer?.trim() || 'No model answer configured.'}
+
+Evaluation Instruction:
+Evaluate only the student's answer for this current scenario step.
+The student may answer in Thai, English, or mixed Thai-English.
+If the required clinical meaning is present using equivalent Thai or English wording, count it as present.
+Do not evaluate future scenario steps.
+Do not introduce medical information that is not provided here.
+`
+}
+
+async function getAuthenticatedStudent() {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const extractedStudentId = user.email?.split('@')[0]
+
+  if (!extractedStudentId) {
+    throw new Error('Invalid user data')
+  }
+
+  const dbStudent = await prisma.student.upsert({
+    where: {
+      studentId: extractedStudentId,
+    },
+    update: {
+      email: user.email,
+    },
+    create: {
+      studentId: extractedStudentId,
+      name: extractedStudentId,
+      email: user.email,
+    },
+  })
+
+  return dbStudent
+}
+
+export async function submitScenarioStepAnswer(formData: FormData) {
+  const scenarioId = formData.get('scenarioId') as string | null
+  const scenarioStepId = formData.get('scenarioStepId') as string | null
+  const answer = formData.get('answer') as string | null
+
+  if (!scenarioId) {
+    throw new Error('Scenario ID is missing')
+  }
+
+  if (!scenarioStepId) {
+    throw new Error('Scenario step ID is missing')
+  }
+
+  const cleanAnswer = answer?.trim() || ''
+
+  if (!cleanAnswer) {
+    throw new Error('Step answer cannot be empty')
+  }
+
+  if (cleanAnswer.length > MAX_STEP_ANSWER_LENGTH) {
+    throw new Error('Step answer must be 2,000 characters or fewer')
+  }
+
+  const dbStudent = await getAuthenticatedStudent()
+
+  const scenario = await prisma.scenario.findUnique({
+    where: {
+      id: scenarioId,
+    },
+  })
+
+  if (!scenario) {
+    throw new Error('Scenario not found')
+  }
+
+  const scenarioStep = await prisma.scenarioStep.findFirst({
+    where: {
+      id: scenarioStepId,
+      scenarioId: scenario.id,
+    },
+  })
+
+  if (!scenarioStep) {
+    throw new Error('Scenario step not found')
+  }
+
+  let attempt = await prisma.attempt.findFirst({
+    where: {
+      studentId: dbStudent.id,
+      scenarioId: scenario.id,
+      isCompleted: false,
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  })
+
+  if (!attempt) {
+    attempt = await prisma.attempt.create({
+      data: {
+        studentId: dbStudent.id,
+        scenarioId: scenario.id,
+        primaryDiagnosis: null,
+        interventions: null,
+        isCompleted: false,
+        aiStatus: 'pending',
+        aiReasoning: 'Step-by-step practice in progress.',
+      },
+    })
+  }
+
+  const existingAttemptStep = await prisma.attemptStep.findUnique({
+    where: {
+      attemptId_scenarioStepId: {
+        attemptId: attempt.id,
+        scenarioStepId: scenarioStep.id,
+      },
+    },
+  })
+
+  if (existingAttemptStep?.isLocked) {
+    redirect(
+      `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}`
+    )
+  }
+
+  const currentAttemptCount = existingAttemptStep?.attemptCount ?? 0
+
+  if (currentAttemptCount >= MAX_STEP_ATTEMPTS) {
+    await prisma.attemptStep.upsert({
+      where: {
+        attemptId_scenarioStepId: {
+          attemptId: attempt.id,
+          scenarioStepId: scenarioStep.id,
+        },
+      },
+      update: {
+        isLocked: true,
+        modelAnswerRevealed: true,
+      },
+      create: {
+        attemptId: attempt.id,
+        scenarioStepId: scenarioStep.id,
+        answer: cleanAnswer,
+        attemptCount: MAX_STEP_ATTEMPTS,
+        isLocked: true,
+        modelAnswerRevealed: true,
+        aiStatus: 'completed',
+        aiScore: 'incorrect',
+        aiReasoning:
+          'The maximum number of attempts has been reached. Please review the model answer before continuing.',
+        aiMissingElements: [],
+      },
+    })
+
+    redirect(
+      `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}`
+    )
+  }
+
+  const nextAttemptCount = currentAttemptCount + 1
+
+  const requiredKeywordGroups = parseKeywordGroups(
+    scenarioStep.requiredKeywordGroups
+  )
+  const optionalKeywordGroups = parseKeywordGroups(
+    scenarioStep.optionalKeywordGroups
+  )
+
+  try {
+    const ruleResult = evaluateWithRuleBasedLayer({
+      studentResponse: cleanAnswer,
+      requiredKeywords: scenarioStep.requiredKeywords,
+      optionalKeywords: scenarioStep.optionalKeywords,
+      requiredKeywordGroups,
+      optionalKeywordGroups,
+    })
+
+    let finalScore = ruleResult.score
+    let finalReasoning = ruleResult.reasoning
+    let finalMissingElements = ruleResult.missing_elements
+
+    if (ruleResult.shouldUseLLM) {
+      const rubricContext = buildStepRubricContext({
+        scenarioTitle: scenario.title,
+        scenarioDescription: scenario.description,
+        stepTitle: scenarioStep.title,
+        stepPrompt: scenarioStep.prompt,
+        stepRubric: scenarioStep.rubric,
+        requiredKeywords: scenarioStep.requiredKeywords,
+        optionalKeywords: scenarioStep.optionalKeywords,
+        requiredKeywordGroups,
+        optionalKeywordGroups,
+        modelAnswer: scenarioStep.modelAnswer,
+      })
+
+      const aiResult = await evaluateWithGemini(cleanAnswer, rubricContext)
+
+      finalScore = aiResult.score
+      finalReasoning = aiResult.reasoning
+      finalMissingElements = aiResult.missing_elements || []
+    }
+
+    const isCorrect = finalScore === 'correct'
+    const shouldRevealModelAnswer =
+      !isCorrect && nextAttemptCount >= MAX_STEP_ATTEMPTS
+    const shouldLockStep = isCorrect || shouldRevealModelAnswer
+
+    await prisma.attemptStep.upsert({
+      where: {
+        attemptId_scenarioStepId: {
+          attemptId: attempt.id,
+          scenarioStepId: scenarioStep.id,
+        },
+      },
+      update: {
+        answer: cleanAnswer,
+        aiScore: finalScore,
+        aiReasoning: finalReasoning,
+        aiMissingElements: finalMissingElements,
+        aiStatus: 'completed',
+        attemptCount: nextAttemptCount,
+        isLocked: shouldLockStep,
+        modelAnswerRevealed: shouldRevealModelAnswer,
+      },
+      create: {
+        attemptId: attempt.id,
+        scenarioStepId: scenarioStep.id,
+        answer: cleanAnswer,
+        aiScore: finalScore,
+        aiReasoning: finalReasoning,
+        aiMissingElements: finalMissingElements,
+        aiStatus: 'completed',
+        attemptCount: nextAttemptCount,
+        isLocked: shouldLockStep,
+        modelAnswerRevealed: shouldRevealModelAnswer,
+      },
+    })
+  } catch {
+    await prisma.attemptStep.upsert({
+      where: {
+        attemptId_scenarioStepId: {
+          attemptId: attempt.id,
+          scenarioStepId: scenarioStep.id,
+        },
+      },
+      update: {
+        answer: cleanAnswer,
+        aiStatus: 'failed',
+      },
+      create: {
+        attemptId: attempt.id,
+        scenarioStepId: scenarioStep.id,
+        answer: cleanAnswer,
+        aiStatus: 'failed',
+        attemptCount: currentAttemptCount,
+        isLocked: false,
+        modelAnswerRevealed: false,
+      },
+    })
+  }
+
+  redirect(
+    `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}`
+  )
+}
+
 export async function submitAssessment(formData: FormData) {
   const supabase = await createClient()
 
@@ -181,8 +512,6 @@ export async function submitAssessment(formData: FormData) {
     },
   })
 
-  console.log('--- CREATED ATTEMPT ---', attempt.id)
-
   const combinedStudentResponse = `
 Diagnosis:
 ${primaryDiagnosis.trim()}
@@ -192,8 +521,6 @@ ${interventions.trim()}
 `
 
   try {
-    console.log('--- RUNNING RULE-BASED EVALUATION ---')
-
     const ruleResult = evaluateWithRuleBasedLayer({
       studentResponse: combinedStudentResponse,
       requiredKeywords: scenario.requiredKeywords,
@@ -201,9 +528,6 @@ ${interventions.trim()}
       requiredKeywordGroups,
       optionalKeywordGroups,
     })
-
-    console.log('--- RULE-BASED RESULT ---')
-    console.log(ruleResult)
 
     if (!ruleResult.shouldUseLLM) {
       await prisma.attempt.update({
@@ -217,11 +541,7 @@ ${interventions.trim()}
           aiStatus: 'completed',
         },
       })
-
-      console.log('--- ATTEMPT UPDATED WITH RULE-BASED RESULT ---', attempt.id)
     } else {
-      console.log('--- SENDING TO GEMINI AI ---')
-
       const rubricContext = buildRubricContext({
         scenarioTitle: scenario.title,
         scenarioDescription: scenario.description,
@@ -238,9 +558,6 @@ ${interventions.trim()}
         rubricContext
       )
 
-      console.log('--- AI EVALUATION RESULT ---')
-      console.log(aiResult)
-
       await prisma.attempt.update({
         where: {
           id: attempt.id,
@@ -252,12 +569,8 @@ ${interventions.trim()}
           aiStatus: 'completed',
         },
       })
-
-      console.log('--- ATTEMPT UPDATED WITH AI RESULTS ---', attempt.id)
     }
-  } catch (error) {
-    console.error('--- EVALUATION FAILED BUT ATTEMPT WAS SAVED ---', error)
-
+  } catch {
     await prisma.attempt.update({
       where: {
         id: attempt.id,

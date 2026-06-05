@@ -46,6 +46,7 @@ type SpeechRecognitionInstance = {
 type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance
 
 type WindowWithSpeechRecognition = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor
   webkitSpeechRecognition?: SpeechRecognitionConstructor
 }
 
@@ -91,7 +92,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#8C1515] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#741111] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#8B1E16] px-6 py-3.5 text-base font-medium text-white shadow-sm transition hover:bg-[#70170F] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
     >
       {pending ? (
         <>
@@ -105,7 +106,9 @@ function SubmitButton() {
   )
 }
 
-function getTranscriptFromSpeechResults(results: AssessmentSpeechRecognitionResultList) {
+function getTranscriptFromSpeechResults(
+  results: AssessmentSpeechRecognitionResultList
+) {
   const transcripts: string[] = []
 
   for (let index = 0; index < results.length; index += 1) {
@@ -139,7 +142,8 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
     setSpeechError(null)
 
     const speechWindow = window as WindowWithSpeechRecognition
-    const SpeechRecognition = speechWindow.webkitSpeechRecognition
+    const SpeechRecognition =
+      speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
       setSpeechError(
@@ -148,7 +152,8 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
       return
     }
 
-    const recognition = new SpeechRecognition() as unknown as SpeechRecognitionInstance
+    const recognition =
+      new SpeechRecognition() as unknown as SpeechRecognitionInstance
 
     recognition.continuous = false
     recognition.interimResults = true
@@ -206,38 +211,38 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
   return (
     <form
       action={submitAssessment}
-      className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+      className="space-y-7 rounded-2xl border border-[#DED8CF] bg-white p-6 shadow-sm sm:p-8"
     >
       <input type="hidden" name="scenarioId" value={scenarioId} />
 
-      <div className="rounded-xl border border-[#C8963C]/30 bg-[#FDF3E3] px-4 py-3">
-        <p className="text-sm font-semibold text-[#8C1515]">
+      <div className="rounded-2xl border border-[#E6C98F] bg-[#F7EAD2] px-5 py-4">
+        <p className="text-base font-semibold text-[#8B1E16]">
           Student Response
         </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700">
+        <p className="mt-2 text-base leading-7 text-[#1F2937]">
           Answer in Thai, English, or mixed Thai-English. Focus on the main
           nursing diagnosis and immediate nursing interventions for this
           patient.
         </p>
       </div>
 
-      <div className="grid gap-5">
-        <div className="rounded-xl border border-slate-200 bg-[#f8f6f3] p-4">
-          <div className="mb-3 flex items-start justify-between gap-3">
+      <div className="grid gap-6">
+        <div className="rounded-2xl border border-[#DED8CF] bg-[#FAF9F7] p-5 sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <label
                 htmlFor="primaryDiagnosis"
-                className="block text-sm font-semibold text-slate-900"
+                className="block text-base font-semibold text-[#111827]"
               >
                 1. What is your primary nursing diagnosis?
               </label>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
+              <p className="mt-2 text-base leading-7 text-[#1F2937]">
                 State the likely nursing problem based on the patient
                 presentation.
               </p>
             </div>
 
-            <span className="rounded-full border border-[#C8963C]/40 bg-white px-3 py-1 text-xs font-semibold text-[#8C1515]">
+            <span className="inline-flex w-fit rounded-full border border-[#D6A84F]/50 bg-white px-4 py-1.5 text-sm font-medium text-[#8B1E16]">
               Required
             </span>
           </div>
@@ -246,22 +251,22 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
             <textarea
               id="primaryDiagnosis"
               name="primaryDiagnosis"
-              rows={4}
+              rows={5}
               value={diagnosis}
               onChange={(event) => setDiagnosis(event.target.value)}
               placeholder="Type your diagnosis here or use voice input..."
               required
-              className="block w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 pr-14 text-sm leading-6 text-slate-900 outline-none transition focus:border-[#8C1515] focus:ring-2 focus:ring-[#8C1515]/15"
+              className="block w-full resize-none rounded-2xl border border-[#D7D0C7] bg-white px-5 py-4 pr-16 text-base leading-7 text-[#111827] outline-none transition placeholder:text-[#6B7280] focus:border-[#8B1E16] focus:ring-4 focus:ring-[#8B1E16]/10"
             />
 
             <button
               type="button"
               onClick={() => startRecording('diagnosis')}
               disabled={isRecording}
-              className={`absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+              className={`absolute bottom-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
                 isRecordingDiagnosis
-                  ? 'animate-pulse border-[#8C1515] bg-[#8C1515] text-white'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-[#C8963C] hover:text-[#8C1515] disabled:cursor-not-allowed disabled:opacity-50'
+                  ? 'animate-pulse border-[#8B1E16] bg-[#8B1E16] text-white'
+                  : 'border-[#D7D0C7] bg-white text-[#4B5563] hover:border-[#D6A84F] hover:text-[#8B1E16] disabled:cursor-not-allowed disabled:opacity-50'
               }`}
               title="Start voice input for diagnosis"
               aria-label="Start voice input for diagnosis"
@@ -271,28 +276,28 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
           </div>
 
           {isRecordingDiagnosis ? (
-            <p className="mt-2 text-xs font-medium text-[#8C1515]">
+            <p className="mt-3 text-sm font-medium text-[#8B1E16]">
               Listening for diagnosis response...
             </p>
           ) : null}
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-[#f8f6f3] p-4">
-          <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="rounded-2xl border border-[#DED8CF] bg-[#FAF9F7] p-5 sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <label
                 htmlFor="interventions"
-                className="block text-sm font-semibold text-slate-900"
+                className="block text-base font-semibold text-[#111827]"
               >
                 2. Recommended immediate nursing interventions
               </label>
-              <p className="mt-1 text-xs leading-5 text-slate-600">
+              <p className="mt-2 text-base leading-7 text-[#1F2937]">
                 List immediate nursing actions that should be taken for the
                 patient.
               </p>
             </div>
 
-            <span className="rounded-full border border-[#C8963C]/40 bg-white px-3 py-1 text-xs font-semibold text-[#8C1515]">
+            <span className="inline-flex w-fit rounded-full border border-[#D6A84F]/50 bg-white px-4 py-1.5 text-sm font-medium text-[#8B1E16]">
               Required
             </span>
           </div>
@@ -301,22 +306,22 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
             <textarea
               id="interventions"
               name="interventions"
-              rows={5}
+              rows={6}
               value={interventions}
               onChange={(event) => setInterventions(event.target.value)}
               placeholder="List your interventions step-by-step or use voice input..."
               required
-              className="block w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 pr-14 text-sm leading-6 text-slate-900 outline-none transition focus:border-[#8C1515] focus:ring-2 focus:ring-[#8C1515]/15"
+              className="block w-full resize-none rounded-2xl border border-[#D7D0C7] bg-white px-5 py-4 pr-16 text-base leading-7 text-[#111827] outline-none transition placeholder:text-[#6B7280] focus:border-[#8B1E16] focus:ring-4 focus:ring-[#8B1E16]/10"
             />
 
             <button
               type="button"
               onClick={() => startRecording('interventions')}
               disabled={isRecording}
-              className={`absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full border transition ${
+              className={`absolute bottom-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
                 isRecordingInterventions
-                  ? 'animate-pulse border-[#8C1515] bg-[#8C1515] text-white'
-                  : 'border-slate-200 bg-white text-slate-600 hover:border-[#C8963C] hover:text-[#8C1515] disabled:cursor-not-allowed disabled:opacity-50'
+                  ? 'animate-pulse border-[#8B1E16] bg-[#8B1E16] text-white'
+                  : 'border-[#D7D0C7] bg-white text-[#4B5563] hover:border-[#D6A84F] hover:text-[#8B1E16] disabled:cursor-not-allowed disabled:opacity-50'
               }`}
               title="Start voice input for interventions"
               aria-label="Start voice input for interventions"
@@ -326,7 +331,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
           </div>
 
           {isRecordingInterventions ? (
-            <p className="mt-2 text-xs font-medium text-[#8C1515]">
+            <p className="mt-3 text-sm font-medium text-[#8B1E16]">
               Listening for intervention response...
             </p>
           ) : null}
@@ -334,23 +339,23 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
       </div>
 
       {speechError ? (
-        <div className="rounded-xl border border-amber-200 bg-[#FDF3E3] px-4 py-3 text-sm leading-6 text-amber-900">
+        <div className="rounded-2xl border border-[#F3D19E] bg-[#FFF7ED] px-5 py-4 text-base leading-7 text-[#1F2937]">
           {speechError}
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-[#E8F4F1] bg-[#E8F4F1] px-4 py-3">
-        <p className="text-sm font-semibold text-slate-900">
+      <div className="rounded-2xl border border-[#B7DDD6] bg-[#E8F4F1] px-5 py-4">
+        <p className="text-base font-semibold text-[#111827]">
           AI feedback note
         </p>
-        <p className="mt-1 text-sm leading-6 text-slate-700">
+        <p className="mt-2 text-base leading-7 text-[#1F2937]">
           The system will first check key clinical concepts. If the answer needs
           deeper interpretation, it will use AI semantic feedback.
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-5 text-slate-500">
+      <div className="flex flex-col gap-4 border-t border-[#DED8CF] pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-base leading-7 text-[#1F2937]">
           Submit only after both fields are completed.
         </p>
 

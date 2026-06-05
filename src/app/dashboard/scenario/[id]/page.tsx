@@ -44,15 +44,17 @@ export default async function AssessmentPage({
   }
 
   const firstStep = scenario.steps[0] ?? null
+  const targetStepId = resolvedSearchParams.stepId ?? firstStep?.id ?? null
 
   const latestAttemptStep =
-    resolvedSearchParams.attemptId && resolvedSearchParams.stepId
+    targetStepId && resolvedSearchParams.attemptId
       ? await prisma.attemptStep.findFirst({
           where: {
             attemptId: resolvedSearchParams.attemptId,
-            scenarioStepId: resolvedSearchParams.stepId,
+            scenarioStepId: targetStepId,
             attempt: {
               scenarioId: scenario.id,
+              isCompleted: false,
               student: {
                 email: user.email,
               },
@@ -69,63 +71,91 @@ export default async function AssessmentPage({
             modelAnswerRevealed: true,
           },
         })
-      : null
+      : targetStepId
+        ? await prisma.attemptStep.findFirst({
+            where: {
+              scenarioStepId: targetStepId,
+              attempt: {
+                scenarioId: scenario.id,
+                isCompleted: false,
+                student: {
+                  email: user.email,
+                },
+              },
+            },
+            orderBy: {
+              attempt: {
+                createdAt: 'desc',
+              },
+            },
+            select: {
+              answer: true,
+              aiScore: true,
+              aiReasoning: true,
+              aiMissingElements: true,
+              aiStatus: true,
+              attemptCount: true,
+              isLocked: true,
+              modelAnswerRevealed: true,
+            },
+          })
+        : null
 
   return (
-    <div className="min-h-screen bg-[#f8f6f3] pb-12 font-sans text-slate-900">
-      <header className="sticky top-0 z-10 border-b border-[#e8e0d5] bg-white">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#F4F2EE] pb-12 font-sans text-[#111827]">
+      <header className="sticky top-0 z-10 border-b border-[#DED8CF] bg-white">
+        <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition-colors hover:text-[#8C1515]"
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#8B1E16] transition-colors hover:text-[#70170F]"
           >
             <span aria-hidden="true">←</span>
             Back to Dashboard
           </Link>
 
-          <div className="hidden items-center gap-2 sm:flex">
-            <span className="h-2 w-2 rounded-full bg-[#C8963C]" />
-            <span className="text-sm font-bold text-[#8C1515]">
+          <div className="hidden items-center gap-3 sm:flex">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#C8963C]" />
+            <span className="text-sm font-medium text-[#8B1E16]">
               Clinical Assessment
             </span>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto mt-8 max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8">
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="border-b border-slate-200 bg-[#8C1515] px-6 py-5 text-white sm:px-8">
+      <main className="mx-auto mt-6 w-full max-w-[1440px] space-y-6 px-5 sm:px-8 lg:px-10">
+        <section className="overflow-hidden rounded-2xl border border-[#DED8CF] bg-white shadow-sm">
+          <div className="border-b border-[#7A1813] bg-[#8B1E16] px-7 py-6 text-white sm:px-10">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#C8963C]">
+                <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#D6A84F]">
                   Clinical Scenario
                 </p>
 
-                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
                   {scenario.title}
                 </h1>
               </div>
 
-              <span className="inline-flex w-fit items-center rounded-full border border-[#C8963C]/50 bg-white/10 px-3 py-1 text-xs font-semibold text-white">
+              <span className="inline-flex w-fit items-center rounded-full border border-[#D6A84F]/60 bg-white/10 px-4 py-1.5 text-sm font-medium text-white">
                 {scenario.bodySystem || 'Clinical Case'}
               </span>
             </div>
           </div>
 
-          <div className="grid gap-0 lg:grid-cols-[1.5fr_1fr]">
-            <div className="p-6 sm:p-8">
-              <div className="rounded-xl border border-slate-200 bg-[#f8f6f3] p-5">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#C8963C]/40 bg-[#FDF3E3] text-sm font-bold text-[#8C1515]">
+          <div className="grid gap-0 lg:grid-cols-[1.7fr_1fr]">
+            <div className="p-7 sm:p-10">
+              <div className="rounded-2xl border border-[#DED8CF] bg-[#FAF9F7] p-6">
+                <div className="flex items-start gap-4">
+                  <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#D6A84F]/50 bg-[#F7EAD2] text-base font-medium text-[#8B1E16]">
                     1
                   </div>
 
                   <div>
-                    <h2 className="text-sm font-bold uppercase tracking-wide text-[#8C1515]">
+                    <h2 className="text-base font-semibold uppercase tracking-[0.08em] text-[#8B1E16]">
                       Patient Presentation
                     </h2>
 
-                    <p className="mt-3 text-sm leading-7 text-slate-700 sm:text-base">
+                    <p className="mt-4 text-base leading-8 text-[#1F2937]">
                       {scenario.description}
                     </p>
                   </div>
@@ -133,23 +163,23 @@ export default async function AssessmentPage({
               </div>
             </div>
 
-            <aside className="border-t border-slate-200 bg-[#E8F4F1] p-6 sm:p-8 lg:border-l lg:border-t-0">
-              <h2 className="text-sm font-bold uppercase tracking-wide text-[#8C1515]">
+            <aside className="border-t border-[#DED8CF] bg-[#EEF7F5] p-7 sm:p-10 lg:border-l lg:border-t-0">
+              <h2 className="text-base font-semibold uppercase tracking-[0.08em] text-[#8B1E16]">
                 Evaluation Support
               </h2>
 
-              <p className="mt-3 text-sm leading-6 text-slate-700">
+              <p className="mt-4 text-base leading-8 text-[#1F2937]">
                 Submit your clinical assessment using Thai text or voice input
                 when available. The system checks required clinical concepts
                 first and uses AI semantic feedback when deeper review is
                 needed.
               </p>
 
-              <div className="mt-5 rounded-xl border border-teal-200 bg-white/70 p-4">
-                <p className="text-sm font-semibold text-slate-900">
+              <div className="mt-6 rounded-2xl border border-[#B7DDD6] bg-white p-5">
+                <p className="text-base font-semibold text-[#111827]">
                   Current learning mode
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                <p className="mt-3 text-base leading-7 text-[#1F2937]">
                   Step-by-step practice with final assessment support.
                 </p>
               </div>
@@ -157,37 +187,37 @@ export default async function AssessmentPage({
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+        <section className="rounded-2xl border border-[#DED8CF] bg-white p-7 shadow-sm sm:p-10">
+          <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#8C1515]">
+              <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#8B1E16]">
                 Scenario Workflow
               </p>
 
-              <h2 className="mt-2 text-xl font-bold text-slate-950">
+              <h2 className="mt-3 text-2xl font-semibold text-[#111827]">
                 Review the clinical steps
               </h2>
 
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+              <p className="mt-3 max-w-4xl text-base leading-8 text-[#1F2937]">
                 These steps represent the intended clinical reasoning path for
                 this case. Step-by-step practice is introduced carefully while
                 keeping the final assessment form available.
               </p>
             </div>
 
-            <span className="inline-flex w-fit items-center rounded-full border border-[#C8963C]/40 bg-[#FDF3E3] px-3 py-1 text-sm font-semibold text-[#8C1515]">
+            <span className="inline-flex w-fit items-center rounded-full border border-[#D6A84F]/50 bg-[#F7EAD2] px-4 py-1.5 text-sm font-medium text-[#8B1E16]">
               {scenario.steps.length} steps
             </span>
           </div>
 
           {scenario.steps.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div
                 className="grid gap-2"
                 style={{
                   gridTemplateColumns: `repeat(${Math.min(
                     scenario.steps.length,
-                    11,
+                    11
                   )}, minmax(0, 1fr))`,
                 }}
               >
@@ -196,31 +226,31 @@ export default async function AssessmentPage({
                     key={step.id}
                     className="flex flex-col items-center gap-2"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#8C1515] text-xs font-bold text-white">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#8B1E16] text-sm font-medium text-white">
                       {step.order}
                     </div>
-                    <div className="h-1 w-full rounded-full bg-[#C8963C]/30" />
+                    <div className="h-1 w-full rounded-full bg-[#D6A84F]/35" />
                   </div>
                 ))}
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-2">
                 {scenario.steps.map((step) => (
                   <article
                     key={step.id}
-                    className="rounded-xl border border-slate-200 bg-[#f8f6f3] p-5"
+                    className="rounded-2xl border border-[#DED8CF] bg-[#FAF9F7] p-6"
                   >
                     <div className="flex items-start gap-4">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#C8963C]/40 bg-white text-sm font-bold text-[#8C1515]">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#D6A84F]/50 bg-white text-base font-medium text-[#8B1E16]">
                         {step.order}
                       </div>
 
                       <div>
-                        <h3 className="font-bold text-slate-950">
+                        <h3 className="text-lg font-semibold text-[#111827]">
                           {step.title}
                         </h3>
 
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                        <p className="mt-3 text-base leading-7 text-[#1F2937]">
                           {step.prompt}
                         </p>
                       </div>
@@ -230,13 +260,16 @@ export default async function AssessmentPage({
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-[#f8f6f3] p-5 text-sm text-slate-500">
+            <div className="rounded-2xl border border-dashed border-[#CFC8BE] bg-[#FAF9F7] p-5 text-base leading-7 text-[#1F2937]">
               No scenario steps have been configured for this case yet.
             </div>
           )}
         </section>
 
         <ScenarioStepPractice
+          key={`${firstStep?.id ?? 'no-step'}-${
+            latestAttemptStep?.attemptCount ?? 0
+          }-${latestAttemptStep?.isLocked ?? false}`}
           scenarioId={scenario.id}
           step={
             firstStep
@@ -252,17 +285,17 @@ export default async function AssessmentPage({
           latestAttemptStep={latestAttemptStep}
         />
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-          <div className="mb-6">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#8C1515]">
+        <section className="rounded-2xl border border-[#DED8CF] bg-white p-7 shadow-sm sm:p-10">
+          <div className="mb-7">
+            <p className="text-sm font-medium uppercase tracking-[0.16em] text-[#8B1E16]">
               Final Assessment
             </p>
 
-            <h2 className="mt-2 text-xl font-bold text-slate-950">
+            <h2 className="mt-3 text-2xl font-semibold text-[#111827]">
               Submit your complete assessment
             </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+            <p className="mt-3 text-base leading-8 text-[#1F2937]">
               Provide your primary nursing diagnosis and recommended immediate
               nursing interventions. Thai responses are supported.
             </p>

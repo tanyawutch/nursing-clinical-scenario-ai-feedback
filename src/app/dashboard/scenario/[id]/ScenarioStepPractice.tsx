@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useTransition } from 'react'
-import { submitScenarioStepAnswer } from './actions'
+import { resetScenarioPractice, submitScenarioStepAnswer } from './actions'
 
 const MAX_STEP_ANSWER_LENGTH = 2000
 const MAX_STEP_ATTEMPTS = 3
@@ -187,6 +187,7 @@ export default function ScenarioStepPractice({
   const [speechError, setSpeechError] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [isResetPending, startResetTransition] = useTransition()
 
   const usedAttempts = latestAttemptStep?.attemptCount ?? 0
   const remainingAttempts = useMemo(() => {
@@ -216,7 +217,11 @@ export default function ScenarioStepPractice({
       latestAttemptStep.aiStatus === 'failed')
 
   const isSubmitDisabled =
-    isPending || isListening || isLocked || answer.trim().length === 0
+    isPending ||
+    isResetPending ||
+    isListening ||
+    isLocked ||
+    answer.trim().length === 0
 
   const feedbackTheme = getFeedbackTheme(
     latestAttemptStep?.aiScore ?? null,
@@ -317,6 +322,26 @@ export default function ScenarioStepPractice({
                 Final attempt next
               </div>
             ) : null}
+
+            {latestAttemptStep ? (
+              <form
+                action={(formData) => {
+                  startResetTransition(() => {
+                    resetScenarioPractice(formData)
+                  })
+                }}
+              >
+                <input type="hidden" name="scenarioId" value={scenarioId} />
+
+                <button
+                  type="submit"
+                  disabled={isPending || isResetPending}
+                  className="mt-1 inline-flex items-center justify-center rounded-full border border-[#D7D0C7] bg-white px-4 py-1.5 text-sm font-medium text-[#374151] transition hover:border-[#8B1E16]/40 hover:bg-[#F7F4EF] hover:text-[#8B1E16] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isResetPending ? 'Restarting...' : 'Restart Practice'}
+                </button>
+              </form>
+            ) : null}
           </div>
         </div>
       </div>
@@ -362,7 +387,7 @@ export default function ScenarioStepPractice({
                   setAnswer(event.target.value)
                 }}
                 maxLength={MAX_STEP_ANSWER_LENGTH}
-                disabled={isLocked || isPending}
+                disabled={isLocked || isPending || isResetPending}
                 rows={7}
                 className="w-full rounded-xl border border-[#D7D0C7] bg-white px-4 py-3 text-base leading-7 text-[#111827] outline-none transition placeholder:text-[#6B7280] focus:border-[#8B1E16] focus:ring-4 focus:ring-[#8B1E16]/10 disabled:cursor-not-allowed disabled:bg-[#F3F1ED] disabled:text-[#4B5563]"
                 placeholder="Type your clinical response here. You can also use Thai voice input if your browser supports it."
@@ -372,6 +397,14 @@ export default function ScenarioStepPractice({
                 <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur-[1px]">
                   <div className="rounded-full border border-[#D7D0C7] bg-white px-4 py-2 text-sm font-medium text-[#374151] shadow-sm">
                     Reviewing your response...
+                  </div>
+                </div>
+              ) : null}
+
+              {isResetPending ? (
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur-[1px]">
+                  <div className="rounded-full border border-[#D7D0C7] bg-white px-4 py-2 text-sm font-medium text-[#374151] shadow-sm">
+                    Restarting practice...
                   </div>
                 </div>
               ) : null}
@@ -406,7 +439,7 @@ export default function ScenarioStepPractice({
             <button
               type="button"
               onClick={startThaiVoiceInput}
-              disabled={isListening || isLocked || isPending}
+              disabled={isListening || isLocked || isPending || isResetPending}
               className="inline-flex items-center justify-center rounded-xl border border-[#D7D0C7] bg-white px-5 py-3 text-sm font-medium text-[#374151] transition hover:border-[#8B1E16]/30 hover:bg-[#F7F4EF] hover:text-[#8B1E16] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isListening ? 'Listening...' : 'Use Thai voice input'}

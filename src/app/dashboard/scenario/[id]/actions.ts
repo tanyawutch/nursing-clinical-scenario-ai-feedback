@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import prisma from '@/utils/prisma'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { evaluateWithGemini } from '@/utils/aiEvaluator'
 import {
   evaluateWithRuleBasedLayer,
@@ -441,6 +442,49 @@ export async function submitScenarioStepAnswer(formData: FormData) {
   redirect(
     `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}`
   )
+}
+
+export async function resetScenarioPractice(formData: FormData) {
+  const scenarioId = formData.get('scenarioId') as string | null
+
+  if (!scenarioId) {
+    throw new Error('Scenario ID is missing')
+  }
+
+  const dbStudent = await getAuthenticatedStudent()
+
+  const scenario = await prisma.scenario.findUnique({
+    where: {
+      id: scenarioId,
+    },
+  })
+
+  if (!scenario) {
+    throw new Error('Scenario not found')
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.attemptStep.deleteMany({
+      where: {
+        attempt: {
+          studentId: dbStudent.id,
+          scenarioId: scenario.id,
+          isCompleted: false,
+        },
+      },
+    })
+
+    await tx.attempt.deleteMany({
+      where: {
+        studentId: dbStudent.id,
+        scenarioId: scenario.id,
+        isCompleted: false,
+      },
+    })
+  })
+
+  revalidatePath(`/dashboard/scenario/${scenario.id}`)
+  redirect(`/dashboard/scenario/${scenario.id}`)
 }
 
 export async function submitAssessment(formData: FormData) {

@@ -5,6 +5,8 @@ import { resetScenarioPractice, submitScenarioStepAnswer } from './actions'
 
 const MAX_STEP_ANSWER_LENGTH = 2000
 const MAX_STEP_ATTEMPTS = 3
+const BACK_PAIN_SCENARIO_ID = 'back-pain-scenario-001'
+const BACK_PAIN_IMAGE_PATH = '/scenarios/back-pain/back-pain-clinical-scene.png'
 
 type ScenarioStepPracticeStep = {
   id: string
@@ -207,6 +209,7 @@ export default function ScenarioStepPractice({
     )
   }
 
+  const isBackPainScenario = scenarioId === BACK_PAIN_SCENARIO_ID
   const isLocked = latestAttemptStep?.isLocked ?? false
   const isFinalAttemptNext = remainingAttempts === 1 && !isLocked
   const isNeedsRetry =
@@ -347,6 +350,43 @@ export default function ScenarioStepPractice({
       </div>
 
       <div className="p-6 sm:p-8">
+        {isBackPainScenario ? (
+          <div className="mb-6 overflow-hidden rounded-2xl border border-[#E5E1DA] bg-[#FBFAF8] shadow-sm">
+            <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
+              <div className="flex min-h-[280px] items-end justify-center bg-[#F3F1ED] px-6 pt-8">
+                <img
+                  src={BACK_PAIN_IMAGE_PATH}
+                  alt="Illustrated older female patient seated during a lower back pain clinical scenario"
+                  className="max-h-[340px] w-full max-w-[520px] object-contain"
+                />
+              </div>
+
+              <div className="flex flex-col justify-center border-t border-[#E5E1DA] bg-white p-5 lg:border-l lg:border-t-0 sm:p-6">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8B1E16]">
+                  Clinical scene
+                </p>
+
+                <h3 className="mt-2 text-lg font-semibold leading-7 text-[#111827]">
+                  Patient presentation for focused assessment
+                </h3>
+
+                <p className="mt-3 text-sm leading-6 text-[#374151]">
+                  Use this scene as context for the current step. Focus on
+                  asking clear assessment questions before giving nursing
+                  advice.
+                </p>
+
+                <div className="mt-4 rounded-xl border border-[#F1D9A8] bg-[#FFF8E8] px-4 py-3">
+                  <p className="text-sm font-medium leading-6 text-[#6B4E16]">
+                    Demo note: this illustrated image is used as a privacy-safe
+                    clinical visual for the Back Pain scenario.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         <form
           action={(formData) => {
             startTransition(() => {

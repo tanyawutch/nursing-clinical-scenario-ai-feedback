@@ -233,7 +233,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
               <svg className="mr-2 -ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
               </svg>
-              Retry Assessment
+              {isPass ? 'Practice Again' : 'Retry Assessment'}
             </Link>
           </div>
 
@@ -264,7 +264,6 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
                 1. What is your primary nursing diagnosis?
               </h4>
             </div>
-            {/* Added shadow-inner and depth styling here */}
             <div className="mt-4 min-h-[120px] rounded-xl border border-slate-200/80 bg-slate-50/80 p-6 shadow-inner">
               <p className="whitespace-pre-line text-base leading-8 text-slate-800">
                 {attempt.primaryDiagnosis || 'No diagnosis submitted.'}
@@ -277,7 +276,6 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
             <h4 className="text-base font-bold text-slate-950">
               2. Recommended immediate nursing interventions
             </h4>
-            {/* Added shadow-inner and depth styling here */}
             <div className="mt-4 min-h-[120px] rounded-xl border border-slate-200/80 bg-slate-50/80 p-6 shadow-inner">
               <p className="whitespace-pre-line text-base leading-8 text-slate-800">
                 {attempt.interventions || 'No interventions submitted.'}

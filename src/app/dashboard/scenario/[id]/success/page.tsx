@@ -19,9 +19,9 @@ type ResultContent = {
   badgeBg: string
   badgeText: string
   dotColor: string
-  stripColor: string
 }
 
+// Logic: Untouched
 function getResultContent(score: string | null): ResultContent {
   if (score === 'correct') {
     return {
@@ -33,7 +33,6 @@ function getResultContent(score: string | null): ResultContent {
       badgeBg: '#f0fdf4',
       badgeText: '#15803d',
       dotColor: '#16a34a',
-      stripColor: '#16a34a',
     }
   }
 
@@ -43,11 +42,10 @@ function getResultContent(score: string | null): ResultContent {
       label: 'Needs Improvement',
       summary:
         'The response is partly correct, but some required clinical ideas should be added.',
-      accentColor: '#C8963C',
-      badgeBg: '#fffbeb',
-      badgeText: '#92400e',
-      dotColor: '#C8963C',
-      stripColor: '#C8963C',
+      accentColor: '#A73535',
+      badgeBg: '#fff5f5',
+      badgeText: '#A73535',
+      dotColor: '#A73535',
     }
   }
 
@@ -57,11 +55,10 @@ function getResultContent(score: string | null): ResultContent {
       label: 'Needs Review',
       summary:
         'The response needs more clinical detail before it can be considered complete.',
-      accentColor: '#8C1515',
+      accentColor: '#A73535',
       badgeBg: '#fff1f2',
       badgeText: '#9f1239',
-      dotColor: '#8C1515',
-      stripColor: '#8C1515',
+      dotColor: '#A73535',
     }
   }
 
@@ -73,10 +70,10 @@ function getResultContent(score: string | null): ResultContent {
     badgeBg: '#f8fafc',
     badgeText: '#475569',
     dotColor: '#64748b',
-    stripColor: '#64748b',
   }
 }
 
+// Logic: Untouched
 function formatMissingElement(element: string) {
   const normalized = element.trim().toLowerCase()
 
@@ -102,6 +99,7 @@ function formatMissingElement(element: string) {
   )
 }
 
+// Logic: Untouched
 function getFeedbackSummary(reasoning: string | null, score: string | null) {
   if (reasoning && reasoning.trim()) {
     return reasoning
@@ -117,6 +115,7 @@ function getFeedbackSummary(reasoning: string | null, score: string | null) {
   return 'The response is missing some required clinical ideas. Review the improvement guidance below and try again with a more complete clinical answer.'
 }
 
+// Server Component Logic: Untouched
 export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   const params = await searchParams
   const attemptId = params.attemptId
@@ -140,18 +139,18 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
 
   if (!attempt) {
     return (
-      <main className="min-h-screen bg-[#f5f3ef] px-6 py-16 text-slate-900">
+      <main className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
         <div className="mx-auto max-w-xl text-center">
-          <p className="text-base font-semibold text-[#8C1515]">
+          <p className="text-base font-bold text-[#A73535]">
             Assessment record not found
           </p>
-          <p className="mt-3 text-sm leading-7 text-slate-600">
+          <p className="mt-3 text-base leading-8 text-slate-800">
             The submitted assessment record could not be found. Please return to
             the dashboard and open the scenario again.
           </p>
           <Link
             href="/dashboard"
-            className="mt-8 inline-flex rounded-full bg-[#8C1515] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#741111]"
+            className="mt-8 inline-flex rounded-full bg-[#A73535] px-7 py-3 text-sm font-bold text-white shadow-md shadow-[#A73535]/20 transition-all hover:-translate-y-0.5 hover:bg-[#8E2B2B]"
           >
             Return to Dashboard
           </Link>
@@ -166,217 +165,191 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   const feedbackSummary = getFeedbackSummary(attempt.aiReasoning, attempt.aiScore)
   const hasMissingElements = attempt.aiMissingElements.length > 0
 
-  return (
-    <main className="min-h-screen bg-[#f5f3ef] text-slate-900">
+  // UI Theme Variables for Coursera Style
+  const isPass = attempt.aiScore === 'correct'
+  const isFail = attempt.aiScore === 'partial' || attempt.aiScore === 'incorrect'
 
+  // Coursera Style Soft Banner Backgrounds
+  const bannerBg = isPass ? 'bg-[#e6f4ea]' : isFail ? 'bg-[#fce8e8]' : 'bg-slate-100'
+  const feedbackBoxBg = isPass ? 'bg-green-50' : isFail ? 'bg-rose-50' : 'bg-slate-50'
+  const feedbackBorder = isPass ? 'border-green-200' : isFail ? 'border-rose-200' : 'border-slate-200'
+  
+  // Text Colors
+  const themeText = isPass ? 'text-green-700' : isFail ? 'text-[#A73535]' : 'text-slate-700'
+  const dotColor = isPass ? 'bg-green-600' : isFail ? 'bg-[#A73535]' : 'bg-slate-600'
+
+  // Primary Button Theme
+  const btnBg = isPass ? 'bg-[#15803d] hover:bg-[#166534] shadow-green-700/25' : isFail ? 'bg-[#A73535] hover:bg-[#8E2B2B] shadow-[#A73535]/25' : 'bg-slate-700 hover:bg-slate-800 shadow-slate-700/25'
+
+  return (
+    <main className="min-h-screen bg-[#f8f9fa] text-slate-900 pb-20 font-sans">
       {/* ─── Header ─── */}
-      <header className="border-b border-[#e2d9cb] bg-white">
-        <div className="mx-auto flex max-w-screen-xl items-center justify-between px-8 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-[#C8963C]">
-              Clinical Scenario Learning
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white shadow-sm">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 transition-colors hover:text-slate-900"
+            >
+              <span aria-hidden="true">←</span>
+              Back
+            </Link>
+            <div className="h-4 w-[1px] bg-slate-300"></div>
+            <p className="text-sm font-bold text-slate-900">
+              {attempt.scenario?.title ?? 'Clinical Scenario Learning'}
             </p>
-            <h1 className="mt-0.5 text-xl font-semibold text-[#8C1515]">
-              Assessment Feedback
-            </h1>
           </div>
-          <Link
-            href="/dashboard"
-            className="text-sm font-medium text-[#8C1515] underline-offset-4 hover:underline"
-          >
-            ← Back to Dashboard
-          </Link>
+          <div className="hidden sm:block text-sm font-semibold text-slate-500">
+            Practice Assessment Feedback
+          </div>
         </div>
       </header>
 
-      {/* ─── Page body ─── */}
-      <div className="mx-auto max-w-screen-xl px-8 py-10">
-
-        {/* ─── Scenario info ─── */}
-        <section className="rounded-2xl border border-[#e2d9cb] bg-white px-10 py-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-[#C8963C]">
-                Scenario Result
-              </p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
-                {attempt.scenario?.title ?? 'Clinical Scenario'}
+      {/* ─── Coursera-style Top Verdict Banner ─── */}
+      <div className={`w-full ${bannerBg} py-6 sm:py-8`}>
+        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+          
+          {/* Left: Grade/Result Text */}
+          <div>
+            <div className="flex flex-wrap items-baseline gap-2">
+              <h2 className="text-xl font-bold text-slate-950 sm:text-2xl">
+                Overall Result:
               </h2>
+              <span className={`text-xl font-bold sm:text-2xl ${themeText}`}>
+                {result.title}
+              </span>
             </div>
-            <span className="rounded-full border border-[#e2d9cb] bg-[#faf8f4] px-4 py-1.5 text-sm font-medium text-slate-700">
-              {attempt.scenario?.bodySystem ?? 'Clinical Practice'}
-            </span>
-          </div>
-          {attempt.scenario?.description && (
-            <p className="mt-4 text-[15px] leading-7 text-slate-600">
-              {attempt.scenario.description}
+            <p className="mt-1.5 text-sm font-medium text-slate-800">
+              {result.summary}
             </p>
-          )}
-        </section>
+          </div>
 
-        {/* ─── Result banner ─── */}
-        <section
-          className="mt-4 rounded-2xl border bg-white px-10 py-7"
-          style={{ borderColor: result.accentColor, borderLeftWidth: '5px' }}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-6">
-            <div className="flex items-start gap-4">
-              <span
-                className="mt-1.5 h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: result.dotColor }}
-              />
-              <div>
-                <p className="text-[13px] font-medium uppercase tracking-wider text-slate-800">
-                  Overall Result
-                </p>
-                <h3 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-                  {result.title}
-                </h3>
-                <p className="mt-1.5 text-[15px] leading-7 text-slate-600">
-                  {result.summary}
-                </p>
-              </div>
-            </div>
-            <span
-              className="rounded-full border px-5 py-2 text-sm font-semibold"
-              style={{
-                borderColor: result.accentColor,
-                backgroundColor: result.badgeBg,
-                color: result.badgeText,
-              }}
+          {/* Right: Action Button */}
+          <div className="shrink-0">
+            <Link
+              href={`/dashboard/scenario/${attempt.scenarioId}`}
+              className={`inline-flex items-center justify-center rounded-xl px-7 py-3 text-sm font-bold text-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${btnBg}`}
             >
-              {result.label}
-            </span>
+              <svg className="mr-2 -ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              Retry Assessment
+            </Link>
           </div>
-        </section>
 
-        {/* ─── Feedback ─── */}
-        <section className="mt-4 rounded-2xl border border-[#e2d9cb] bg-white px-10 py-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#C8963C]">
-            Feedback
-          </p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-900">
-            Clinical Guidance
-          </h3>
+        </div>
+      </div>
 
-          {attempt.aiStatus === 'completed' && (
-            <p className="mt-4 text-[15px] leading-7 text-slate-700">
-              {feedbackSummary}
-            </p>
-          )}
+      {/* ─── Main Content Container (Structured Review Layout) ─── */}
+      <div className="mx-auto mt-8 max-w-5xl px-5 sm:px-8 lg:px-10">
+        
+        {/* ─── Unified Review Paper Card ─── */}
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          
+          {/* Header of the Card */}
+          <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-5 sm:px-8">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-950">Submitted Response Review</h3>
+              
+              <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-xs font-bold text-blue-900 shadow-sm">
+                {attempt.scenario?.bodySystem ?? 'Clinical Practice'}
+              </span>
+            </div>
+          </div>
 
-          {attempt.aiStatus === 'failed' && (
-            <div className="mt-4 rounded-xl border border-[#fcd9a0] bg-[#fffbeb] p-5">
-              <p className="text-sm font-semibold text-[#92400e]">
-                Feedback temporarily unavailable
-              </p>
-              <p className="mt-2 text-sm leading-7 text-slate-700">
-                The assessment was submitted successfully, but feedback could
-                not be generated at this moment. Please try again later or ask
-                the instructor for review.
+          {/* Q1: Primary Diagnosis */}
+          <div className="border-b border-slate-100 px-6 py-8 sm:px-8">
+            <div className="flex items-start justify-between gap-4">
+              <h4 className="text-base font-bold text-slate-950">
+                1. What is your primary nursing diagnosis?
+              </h4>
+            </div>
+            {/* Added shadow-inner and depth styling here */}
+            <div className="mt-4 min-h-[120px] rounded-xl border border-slate-200/80 bg-slate-50/80 p-6 shadow-inner">
+              <p className="whitespace-pre-line text-base leading-8 text-slate-800">
+                {attempt.primaryDiagnosis || 'No diagnosis submitted.'}
               </p>
             </div>
-          )}
+          </div>
 
-          {attempt.aiStatus === 'pending' && (
-            <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-semibold text-slate-800">
-                Evaluation pending
-              </p>
-              <p className="mt-2 text-sm leading-7 text-slate-600">
-                The submission has been received and is waiting for evaluation.
+          {/* Q2: Interventions */}
+          <div className="px-6 py-8 sm:px-8">
+            <h4 className="text-base font-bold text-slate-950">
+              2. Recommended immediate nursing interventions
+            </h4>
+            {/* Added shadow-inner and depth styling here */}
+            <div className="mt-4 min-h-[120px] rounded-xl border border-slate-200/80 bg-slate-50/80 p-6 shadow-inner">
+              <p className="whitespace-pre-line text-base leading-8 text-slate-800">
+                {attempt.interventions || 'No interventions submitted.'}
               </p>
             </div>
-          )}
+          </div>
 
-          {attempt.aiStatus === 'completed' && (
-            <div className="mt-7 border-t border-slate-200 pt-7">
-              {hasMissingElements ? (
-                <>
-                  <h4 className="text-base font-semibold text-slate-900">
-                    Recommended Improvements
-                  </h4>
-                  <p className="mt-1.5 text-[15px] leading-7 text-slate-600">
-                    Add these clinical points to make the response more
-                    complete.
-                  </p>
-                  <ul className="mt-5 space-y-3">
-                    {attempt.aiMissingElements.map((element, index) => (
-                      <li
-                        key={`${element}-${index}`}
-                        className="flex items-start gap-3 text-[15px] leading-7 text-slate-700"
-                      >
-                        <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-[#8C1515]" />
-                        <span>{formatMissingElement(element)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
+          {/* ─── Coursera-style Evaluation Box ─── */}
+          <div className={`border-t ${feedbackBorder} ${feedbackBoxBg} p-6 sm:p-8`}>
+            
+            {/* Status Header (Nice Work / Try Again) */}
+            <div className="flex items-center gap-3">
+              {isPass ? (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
+                  <svg className="h-5 w-5 text-green-700" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  </svg>
+                </div>
               ) : (
-                <div className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-6">
-                  <h4 className="text-base font-semibold text-[#15803d]">
-                    No major missing elements found
-                  </h4>
-                  <p className="mt-2 text-[15px] leading-7 text-slate-700">
-                    The submitted answer covers the expected clinical ideas for
-                    this scenario. Continue practicing to improve clarity and
-                    confidence.
-                  </p>
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100">
+                  <svg className="h-5 w-5 text-[#A73535]" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </div>
               )}
+              <h4 className={`text-lg font-bold ${themeText}`}>
+                {isPass ? 'Nice work' : 'Try again'}
+              </h4>
             </div>
-          )}
-        </section>
 
-        {/* ─── Submitted answer ─── */}
-        <section className="mt-4 rounded-2xl border border-[#e2d9cb] bg-white px-10 py-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#C8963C]">
-            Submitted Answer
-          </p>
-          <h3 className="mt-2 text-xl font-semibold text-slate-900">
-            Your Response
-          </h3>
+            {/* AI Feedback Summary */}
+            {(attempt.aiStatus === 'completed' || attempt.aiStatus === 'pending') && (
+              <p className="mt-4 text-base leading-8 text-slate-800">
+                {attempt.aiStatus === 'completed' ? feedbackSummary : 'The submission has been received and is waiting for evaluation.'}
+              </p>
+            )}
 
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-            <div>
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-500">
-                Assessment / Diagnosis
+            {/* Missing Elements List */}
+            {attempt.aiStatus === 'completed' && hasMissingElements && (
+              <ul className="mt-5 space-y-3">
+                {attempt.aiMissingElements.map((element, index) => (
+                  <li
+                    key={`${element}-${index}`}
+                    className="flex items-start gap-3 rounded-xl border border-white/60 bg-white/80 px-5 py-3.5 text-base leading-8 text-slate-900 shadow-sm"
+                  >
+                    <span className={`mt-3.5 h-1.5 w-1.5 shrink-0 rounded-full ${dotColor}`} />
+                    <span className="font-medium">{formatMissingElement(element)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/* API Failure Fallback */}
+            {attempt.aiStatus === 'failed' && (
+              <p className="mt-4 text-base leading-8 text-slate-800">
+                The assessment was submitted successfully, but feedback could not be generated at this moment. Please try again later or ask the instructor for review.
               </p>
-              <div className="mt-3 min-h-32 rounded-xl border border-slate-200 bg-slate-50 p-5">
-                <p className="whitespace-pre-line text-[15px] leading-7 text-slate-800">
-                  {attempt.primaryDiagnosis || 'No diagnosis submitted.'}
-                </p>
-              </div>
-            </div>
-            <div>
-              <p className="text-[13px] font-semibold uppercase tracking-wider text-slate-500">
-                Nursing Interventions
-              </p>
-              <div className="mt-3 min-h-32 rounded-xl border border-slate-200 bg-slate-50 p-5">
-                <p className="whitespace-pre-line text-[15px] leading-7 text-slate-800">
-                  {attempt.interventions || 'No interventions submitted.'}
-                </p>
-              </div>
-            </div>
+            )}
+
           </div>
-        </section>
+        </div>
 
-        {/* ─── Actions ─── */}
-        <div className="mt-10 mb-6 flex flex-row items-center justify-center gap-4">
-          <Link
-            href={`/dashboard/scenario/${attempt.scenarioId}`}
-            className="rounded-full bg-[#8C1515] px-10 py-3 text-sm font-semibold text-white transition hover:bg-[#741111]"
-          >
-            Try Again
-          </Link>
+        {/* ─── Bottom Actions ─── */}
+        <div className="mt-8 mb-8 flex justify-center">
           <Link
             href="/dashboard"
-            className="rounded-full border border-[#d4c9b5] bg-white px-10 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#8C1515] hover:text-[#8C1515]"
+            className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-8 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-400 hover:text-slate-900"
           >
             Return to Dashboard
           </Link>
         </div>
-
+        
       </div>
     </main>
   )

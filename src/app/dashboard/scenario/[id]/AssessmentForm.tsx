@@ -62,7 +62,7 @@ function LoadingSpinner() {
 function MicrophoneIcon() {
   return (
     <svg
-      className="h-4 w-4"
+      className="h-5 w-5"
       viewBox="0 0 24 24"
       fill="none"
       aria-hidden="true"
@@ -92,7 +92,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#8B1E16] px-6 py-3.5 text-base font-medium text-white shadow-sm transition hover:bg-[#70170F] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#A73535] px-8 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-[#8F2C2C] focus:outline-none focus:ring-2 focus:ring-[#A73535] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
     >
       {pending ? (
         <>
@@ -209,40 +209,25 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
   }
 
   return (
-    <form
-      action={submitAssessment}
-      className="space-y-7 rounded-2xl border border-[#DED8CF] bg-white p-6 shadow-sm sm:p-8"
-    >
+    <form action={submitAssessment} className="space-y-10">
       <input type="hidden" name="scenarioId" value={scenarioId} />
 
-      <div className="rounded-2xl border border-[#E6C98F] bg-[#F7EAD2] px-5 py-4">
-        <p className="text-base font-semibold text-[#8B1E16]">
-          Student Response
-        </p>
-        <p className="mt-2 text-base leading-7 text-[#1F2937]">
-          Answer in Thai, English, or mixed Thai-English. Focus on the main
-          nursing diagnosis and immediate nursing interventions for this
-          patient.
-        </p>
-      </div>
-
-      <div className="grid gap-6">
-        <div className="rounded-2xl border border-[#DED8CF] bg-[#FAF9F7] p-5 sm:p-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-8">
+        {/* Field 1: Primary Diagnosis */}
+        <div>
+          <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div>
               <label
                 htmlFor="primaryDiagnosis"
-                className="block text-base font-semibold text-[#111827]"
+                className="block text-lg font-bold text-slate-950"
               >
                 1. What is your primary nursing diagnosis?
               </label>
-              <p className="mt-2 text-base leading-7 text-[#1F2937]">
-                State the likely nursing problem based on the patient
-                presentation.
+              <p className="mt-2 text-base leading-7 text-slate-800">
+                State the likely nursing problem based on the patient presentation.
               </p>
             </div>
-
-            <span className="inline-flex w-fit rounded-full border border-[#D6A84F]/50 bg-white px-4 py-1.5 text-sm font-medium text-[#8B1E16]">
+            <span className="inline-flex shrink-0 items-center rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900">
               Required
             </span>
           </div>
@@ -256,17 +241,17 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
               onChange={(event) => setDiagnosis(event.target.value)}
               placeholder="Type your diagnosis here or use voice input..."
               required
-              className="block w-full resize-none rounded-2xl border border-[#D7D0C7] bg-white px-5 py-4 pr-16 text-base leading-7 text-[#111827] outline-none transition placeholder:text-[#6B7280] focus:border-[#8B1E16] focus:ring-4 focus:ring-[#8B1E16]/10"
+              className="block w-full resize-none rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-16 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#A73535] focus:ring-4 focus:ring-[#A73535]/10"
             />
 
             <button
               type="button"
               onClick={() => startRecording('diagnosis')}
               disabled={isRecording}
-              className={`absolute bottom-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
+              className={`absolute bottom-4 right-4 inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
                 isRecordingDiagnosis
-                  ? 'animate-pulse border-[#8B1E16] bg-[#8B1E16] text-white'
-                  : 'border-[#D7D0C7] bg-white text-[#4B5563] hover:border-[#D6A84F] hover:text-[#8B1E16] disabled:cursor-not-allowed disabled:opacity-50'
+                  ? 'animate-pulse border-[#A73535] bg-[#A73535] text-white shadow-md'
+                  : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:text-[#A73535] disabled:cursor-not-allowed disabled:opacity-50'
               }`}
               title="Start voice input for diagnosis"
               aria-label="Start voice input for diagnosis"
@@ -276,28 +261,27 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
           </div>
 
           {isRecordingDiagnosis ? (
-            <p className="mt-3 text-sm font-medium text-[#8B1E16]">
+            <p className="mt-3 text-sm font-bold text-[#A73535] animate-pulse">
               Listening for diagnosis response...
             </p>
           ) : null}
         </div>
 
-        <div className="rounded-2xl border border-[#DED8CF] bg-[#FAF9F7] p-5 sm:p-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        {/* Field 2: Interventions */}
+        <div>
+          <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div>
               <label
                 htmlFor="interventions"
-                className="block text-base font-semibold text-[#111827]"
+                className="block text-lg font-bold text-slate-950"
               >
                 2. Recommended immediate nursing interventions
               </label>
-              <p className="mt-2 text-base leading-7 text-[#1F2937]">
-                List immediate nursing actions that should be taken for the
-                patient.
+              <p className="mt-2 text-base leading-7 text-slate-800">
+                List immediate nursing actions that should be taken for the patient.
               </p>
             </div>
-
-            <span className="inline-flex w-fit rounded-full border border-[#D6A84F]/50 bg-white px-4 py-1.5 text-sm font-medium text-[#8B1E16]">
+            <span className="inline-flex shrink-0 items-center rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900">
               Required
             </span>
           </div>
@@ -311,17 +295,17 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
               onChange={(event) => setInterventions(event.target.value)}
               placeholder="List your interventions step-by-step or use voice input..."
               required
-              className="block w-full resize-none rounded-2xl border border-[#D7D0C7] bg-white px-5 py-4 pr-16 text-base leading-7 text-[#111827] outline-none transition placeholder:text-[#6B7280] focus:border-[#8B1E16] focus:ring-4 focus:ring-[#8B1E16]/10"
+              className="block w-full resize-none rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-16 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#A73535] focus:ring-4 focus:ring-[#A73535]/10"
             />
 
             <button
               type="button"
               onClick={() => startRecording('interventions')}
               disabled={isRecording}
-              className={`absolute bottom-4 right-4 inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
+              className={`absolute bottom-4 right-4 inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
                 isRecordingInterventions
-                  ? 'animate-pulse border-[#8B1E16] bg-[#8B1E16] text-white'
-                  : 'border-[#D7D0C7] bg-white text-[#4B5563] hover:border-[#D6A84F] hover:text-[#8B1E16] disabled:cursor-not-allowed disabled:opacity-50'
+                  ? 'animate-pulse border-[#A73535] bg-[#A73535] text-white shadow-md'
+                  : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:text-[#A73535] disabled:cursor-not-allowed disabled:opacity-50'
               }`}
               title="Start voice input for interventions"
               aria-label="Start voice input for interventions"
@@ -331,34 +315,35 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
           </div>
 
           {isRecordingInterventions ? (
-            <p className="mt-3 text-sm font-medium text-[#8B1E16]">
+            <p className="mt-3 text-sm font-bold text-[#A73535] animate-pulse">
               Listening for intervention response...
             </p>
           ) : null}
         </div>
       </div>
 
+      {/* Speech Error Banner */}
       {speechError ? (
-        <div className="rounded-2xl border border-[#F3D19E] bg-[#FFF7ED] px-5 py-4 text-base leading-7 text-[#1F2937]">
-          {speechError}
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+          <h3 className="text-sm font-bold text-red-800">Voice input notice</h3>
+          <p className="mt-1 text-sm text-red-700">{speechError}</p>
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-[#B7DDD6] bg-[#E8F4F1] px-5 py-4">
-        <p className="text-base font-semibold text-[#111827]">
-          AI feedback note
-        </p>
-        <p className="mt-2 text-base leading-7 text-[#1F2937]">
-          The system will first check key clinical concepts. If the answer needs
-          deeper interpretation, it will use AI semantic feedback.
+      {/* Footer Area */}
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+        <p className="text-base font-bold text-slate-950">AI Feedback Note</p>
+        <p className="mt-2 text-base leading-7 text-slate-800">
+          The system first checks key clinical concepts. If the answer needs
+          deeper interpretation, AI semantic feedback is used to support
+          learning.
         </p>
       </div>
 
-      <div className="flex flex-col gap-4 border-t border-[#DED8CF] pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-base leading-7 text-[#1F2937]">
+      <div className="flex flex-col gap-4 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-base leading-7 text-slate-800">
           Submit only after both fields are completed.
         </p>
-
         <SubmitButton />
       </div>
     </form>

@@ -127,7 +127,6 @@ export default async function AssessmentPage({
           <div className="bg-[#A73535] px-7 py-7 text-white sm:px-10">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                {/* Fix 1: text-white/90 → text-white */}
                 <p className="text-sm font-bold uppercase tracking-[0.12em] text-white">
                   Clinical Scenario
                 </p>
@@ -137,7 +136,6 @@ export default async function AssessmentPage({
                 </h1>
               </div>
 
-              {/* Fix 2: bg-white/15 border-white/35 → bg-white/20 border-white/50 */}
               <span className="inline-flex w-fit items-center rounded-full border border-white/50 bg-white/20 px-4 py-1.5 text-sm font-semibold text-white">
                 {scenario.bodySystem || 'Clinical Case'}
               </span>
@@ -176,7 +174,6 @@ export default async function AssessmentPage({
                 feedback is used to support learning.
               </p>
 
-              {/* Fix 3: blue → neutral white/slate */}
               <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
                 <p className="text-base font-bold text-slate-950">
                   Current learning mode
@@ -252,7 +249,6 @@ export default async function AssessmentPage({
                           {step.title}
                         </h3>
 
-                        {/* Fix 4: font-medium → font-normal */}
                         <p className="mt-3 text-base leading-7 text-slate-800">
                           {step.prompt}
                         </p>
@@ -288,23 +284,31 @@ export default async function AssessmentPage({
           latestAttemptStep={latestAttemptStep}
         />
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
-          <div className="mb-7">
-            <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#A73535]">
-              Final Assessment
-            </p>
+        {/* Polished Final Assessment Section matching Top Structure */}
+        <section
+          id="final-assessment"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10"
+        >
+          <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+  <div>
+    <h2 className="text-2xl font-bold text-[#A73535]">
+      Final Assessment
+    </h2>
 
-            <h2 className="mt-2 text-2xl font-bold text-slate-950">
-              Submit your complete assessment
-            </h2>
+    <p className="mt-2 text-sm font-bold uppercase tracking-[0.12em] text-slate-950">
+      Submit your complete assessment
+    </p>
 
-            <p className="mt-3 text-base leading-8 text-slate-800">
-              Provide your primary nursing diagnosis and recommended immediate
-              nursing interventions. Thai responses are supported.
-            </p>
+    <p className="mt-3 text-base leading-8 text-slate-800">
+      Provide your primary nursing diagnosis and recommended immediate
+      nursing interventions. Thai responses are supported.
+    </p>
+  </div>
+</div>
+
+          <div className="border-t border-slate-200 pt-8">
+            <AssessmentForm scenarioId={scenario.id} />
           </div>
-
-          <AssessmentForm scenarioId={scenario.id} />
         </section>
       </main>
     </div>

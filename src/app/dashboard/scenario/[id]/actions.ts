@@ -10,8 +10,8 @@ import {
   type KeywordGroup,
 } from '@/utils/ruleBasedEvaluator'
 
-const MAX_STEP_ATTEMPTS = 3
-const MAX_STEP_ANSWER_LENGTH = 2000
+const MAX_STEP_ATTEMPTS = 2
+const MAX_STEP_ANSWER_LENGTH = 4000
 
 function parseKeywordGroups(value: unknown): KeywordGroup[] | null {
   if (!Array.isArray(value)) {
@@ -40,10 +40,29 @@ function parseKeywordGroups(value: unknown): KeywordGroup[] | null {
         (keyword): keyword is string => typeof keyword === 'string'
       )
 
-      return {
+      const parsedGroup: KeywordGroup = {
         label,
         keywords: cleanKeywords,
       }
+
+      if (typeof (group as { points?: unknown }).points === 'number') {
+        parsedGroup.points = (group as { points: number }).points
+      }
+
+      if (typeof (group as { category?: unknown }).category === 'string') {
+        parsedGroup.category = (group as { category: string }).category
+      }
+
+      if (
+        typeof (group as { avoidNegation?: unknown }).avoidNegation ===
+        'boolean'
+      ) {
+        parsedGroup.avoidNegation = (
+          group as { avoidNegation: boolean }
+        ).avoidNegation
+      }
+
+      return parsedGroup
     })
     .filter((group): group is KeywordGroup => group !== null)
 
@@ -58,6 +77,12 @@ function formatKeywordGroupsForRubric(groups: KeywordGroup[] | null) {
   return groups
     .map((group) => `- ${group.label}: ${group.keywords.join(', ')}`)
     .join('\n')
+}
+
+function shouldUseGemini() {
+  const apiKey = process.env.GOOGLE_AI_API_KEY
+
+  return Boolean(apiKey && apiKey !== 'placeholder')
 }
 
 function buildRubricContext({
@@ -221,6 +246,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
   const scenarioId = formData.get('scenarioId') as string | null
   const scenarioStepId = formData.get('scenarioStepId') as string | null
   const answer = formData.get('answer') as string | null
+  const lang = formData.get('lang') === 'en' ? 'en' : 'th'
 
   if (!scenarioId) {
     throw new Error('Scenario ID is missing')
@@ -299,7 +325,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
 
   if (existingAttemptStep?.isLocked) {
     redirect(
-      `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}`
+      `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}&lang=${lang}`
     )
   }
 
@@ -327,13 +353,17 @@ export async function submitScenarioStepAnswer(formData: FormData) {
         aiStatus: 'completed',
         aiScore: 'incorrect',
         aiReasoning:
-          'The maximum number of attempts has been reached. Please review the model answer before continuing.',
+          'ครบจำนวนครั้งที่อนุญาตแล้ว กรุณาทบทวนเฉลยก่อนดำเนินการต่อ',
         aiMissingElements: [],
+        numericScore: 0,
+        maxScore: scenarioStep.maxScore || null,
+        matchedElements: [],
+        evaluationDetails: {},
       },
     })
 
     redirect(
-      `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}`
+      `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}&lang=${lang}`
     )
   }
 
@@ -353,13 +383,19 @@ export async function submitScenarioStepAnswer(formData: FormData) {
       optionalKeywords: scenarioStep.optionalKeywords,
       requiredKeywordGroups,
       optionalKeywordGroups,
+      maxScore: scenarioStep.maxScore || undefined,
+      passScore: scenarioStep.passScore || undefined,
     })
 
     let finalScore = ruleResult.score
     let finalReasoning = ruleResult.reasoning
     let finalMissingElements = ruleResult.missing_elements
+    const finalNumericScore = ruleResult.numericScore
+    const finalMaxScore = ruleResult.maxScore
+    const finalMatchedElements = ruleResult.matchedElements
+    const finalEvaluationDetails = ruleResult.evaluationDetails
 
-    if (ruleResult.shouldUseLLM) {
+    if (ruleResult.shouldUseLLM && shouldUseGemini()) {
       const rubricContext = buildStepRubricContext({
         scenarioTitle: scenario.title,
         scenarioDescription: scenario.description,
@@ -398,6 +434,10 @@ export async function submitScenarioStepAnswer(formData: FormData) {
         aiReasoning: finalReasoning,
         aiMissingElements: finalMissingElements,
         aiStatus: 'completed',
+        numericScore: finalNumericScore,
+        maxScore: finalMaxScore,
+        matchedElements: finalMatchedElements,
+        evaluationDetails: finalEvaluationDetails,
         attemptCount: nextAttemptCount,
         isLocked: shouldLockStep,
         modelAnswerRevealed: shouldRevealModelAnswer,
@@ -410,6 +450,10 @@ export async function submitScenarioStepAnswer(formData: FormData) {
         aiReasoning: finalReasoning,
         aiMissingElements: finalMissingElements,
         aiStatus: 'completed',
+        numericScore: finalNumericScore,
+        maxScore: finalMaxScore,
+        matchedElements: finalMatchedElements,
+        evaluationDetails: finalEvaluationDetails,
         attemptCount: nextAttemptCount,
         isLocked: shouldLockStep,
         modelAnswerRevealed: shouldRevealModelAnswer,
@@ -426,12 +470,16 @@ export async function submitScenarioStepAnswer(formData: FormData) {
       update: {
         answer: cleanAnswer,
         aiStatus: 'failed',
+        aiReasoning:
+          'ระบบไม่สามารถตรวจคำตอบได้ในขณะนี้ กรุณาลองส่งคำตอบอีกครั้ง',
       },
       create: {
         attemptId: attempt.id,
         scenarioStepId: scenarioStep.id,
         answer: cleanAnswer,
         aiStatus: 'failed',
+        aiReasoning:
+          'ระบบไม่สามารถตรวจคำตอบได้ในขณะนี้ กรุณาลองส่งคำตอบอีกครั้ง',
         attemptCount: currentAttemptCount,
         isLocked: false,
         modelAnswerRevealed: false,
@@ -440,12 +488,13 @@ export async function submitScenarioStepAnswer(formData: FormData) {
   }
 
   redirect(
-    `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}`
+    `/dashboard/scenario/${scenario.id}?attemptId=${attempt.id}&stepId=${scenarioStep.id}&lang=${lang}`
   )
 }
 
 export async function resetScenarioPractice(formData: FormData) {
   const scenarioId = formData.get('scenarioId') as string | null
+  const lang = formData.get('lang') === 'en' ? 'en' : 'th'
 
   if (!scenarioId) {
     throw new Error('Scenario ID is missing')
@@ -484,7 +533,7 @@ export async function resetScenarioPractice(formData: FormData) {
   })
 
   revalidatePath(`/dashboard/scenario/${scenario.id}`)
-  redirect(`/dashboard/scenario/${scenario.id}`)
+  redirect(`/dashboard/scenario/${scenario.id}?lang=${lang}`)
 }
 
 export async function submitAssessment(formData: FormData) {
@@ -571,9 +620,11 @@ ${interventions.trim()}
       optionalKeywords: scenario.optionalKeywords,
       requiredKeywordGroups,
       optionalKeywordGroups,
+      maxScore: 50,
+      passScore: 40,
     })
 
-    if (!ruleResult.shouldUseLLM) {
+    if (!ruleResult.shouldUseLLM || !shouldUseGemini()) {
       await prisma.attempt.update({
         where: {
           id: attempt.id,

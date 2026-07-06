@@ -62,6 +62,11 @@ model ScenarioStep {
   requiredKeywordGroups Json?
   optionalKeywordGroups Json?
 
+  // Rubric scoring and structured input metadata.
+  maxScore   Int  @default(0)
+  passScore  Int  @default(0)
+  formSchema Json?
+
   attemptSteps AttemptStep[]
   createdAt    DateTime      @default(now())
 
@@ -109,9 +114,13 @@ model AttemptStep {
   aiReasoning       String?
   aiMissingElements String[] @default([])
   aiStatus          String   @default("pending") // pending, completed, failed
+  numericScore      Int?
+  maxScore          Int?
+  matchedElements   String[] @default([])
+  evaluationDetails Json?
 
   // Step retry control for SRS FR-AI-03.
-  // A student can retry a step up to 3 times before the model answer is revealed.
+  // A student can retry a step according to the clinical rubric before the model answer is revealed.
   attemptCount        Int     @default(0)
   isLocked            Boolean @default(false)
   modelAnswerRevealed Boolean @default(false)

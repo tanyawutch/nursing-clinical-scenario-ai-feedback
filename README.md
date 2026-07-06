@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nursing Clinical Scenario AI Feedback
 
-## Getting Started
+Scenario-based learning platform for nursing students. The current demo focuses
+on an acute lower back pain case with step-by-step practice, rule-based keyword
+checking, and Gemini-supported feedback.
 
-First, run the development server:
+## Tech Stack
+
+- Next.js 16 App Router
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Prisma 7 with PostgreSQL
+- Supabase Auth
+- Google Gemini API for semantic evaluation
+
+## Setup
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Required environment variables:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+GOOGLE_AI_API_KEY="YOUR_GOOGLE_AI_API_KEY"
+```
+
+Generate Prisma Client:
+
+```bash
+npx prisma generate
+```
+
+Seed the demo scenario after the database is available:
+
+```bash
+npx prisma db seed
+```
+
+## Development
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run build
+```
 
-## Learn More
+`npm run build` requires the environment variables above. Placeholder values are
+enough for type/build checks, but real values are required for login, database
+access, seeding, and AI feedback.
 
-To learn more about Next.js, take a look at the following resources:
+## Current Content Status
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Demo-ready: Acute Lower Back Pain
+- Planned curriculum: 12 scenario slots across 6 clinical modules
+- Pending work: validated clinical content, rubrics, tests, audit logging, and
+  production deployment setup

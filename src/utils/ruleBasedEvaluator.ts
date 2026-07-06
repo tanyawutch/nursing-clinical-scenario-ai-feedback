@@ -3,6 +3,9 @@
 export type KeywordGroup = {
   label: string
   keywords: string[]
+  points?: number
+  category?: string
+  avoidNegation?: boolean
 }
 
 export type RuleBasedEvaluationResult = {
@@ -13,26 +16,39 @@ export type RuleBasedEvaluationResult = {
   matchedOptionalKeywords: string[]
   requiredMatchRatio: number
   shouldUseLLM: boolean
+  numericScore: number
+  maxScore: number
+  passScore: number
+  matchedElements: string[]
+  evaluationDetails: {
+    totalRequired: number
+    matchedRequired: number
+    categories: Record<string, { score: number; maxScore: number }>
+  }
 }
 
 type RuleBasedEvaluatorInput = {
   studentResponse: string
-
-  /**
-   * Legacy flat keyword support.
-   * Keep this field so existing Scenario and ScenarioStep records continue working.
-   */
   requiredKeywords: string[]
   optionalKeywords?: string[]
-
-  /**
-   * New grouped keyword support.
-   * Each group represents one required clinical concept.
-   * A group passes if the student response contains at least one keyword from that group.
-   */
   requiredKeywordGroups?: KeywordGroup[] | null
   optionalKeywordGroups?: KeywordGroup[] | null
+  maxScore?: number
+  passScore?: number
 }
+
+const NEGATION_PREFIXES = [
+  'ไม่มี',
+  'ไม่ มี',
+  'ไม่',
+  'ปฏิเสธ',
+  'ปฎิเสธ',
+  'no ',
+  'not ',
+  'deny',
+  'denies',
+  'without',
+]
 
 function normalizeText(text: string) {
   return text
@@ -42,14 +58,37 @@ function normalizeText(text: string) {
     .trim()
 }
 
-function keywordExistsInText(normalizedText: string, keyword: string) {
+function hasNearbyNegation(normalizedText: string, startIndex: number) {
+  const prefix = normalizedText.slice(Math.max(0, startIndex - 16), startIndex)
+
+  return NEGATION_PREFIXES.some((negation) => prefix.endsWith(negation))
+}
+
+function keywordExistsInText(
+  normalizedText: string,
+  keyword: string,
+  avoidNegation = true
+) {
   const normalizedKeyword = normalizeText(keyword)
 
   if (!normalizedKeyword) {
     return false
   }
 
-  return normalizedText.includes(normalizedKeyword)
+  let searchIndex = normalizedText.indexOf(normalizedKeyword)
+
+  while (searchIndex >= 0) {
+    if (!avoidNegation || !hasNearbyNegation(normalizedText, searchIndex)) {
+      return true
+    }
+
+    searchIndex = normalizedText.indexOf(
+      normalizedKeyword,
+      searchIndex + normalizedKeyword.length
+    )
+  }
+
+  return false
 }
 
 function cleanKeywordList(keywords: string[]) {
@@ -65,94 +104,18 @@ function cleanKeywordGroups(groups?: KeywordGroup[] | null) {
     .map((group) => ({
       label: group.label.trim(),
       keywords: cleanKeywordList(group.keywords ?? []),
+      points: Number.isFinite(group.points) ? Number(group.points) : 1,
+      category: group.category?.trim() || 'General',
+      avoidNegation: group.avoidNegation ?? true,
     }))
     .filter((group) => group.label && group.keywords.length > 0)
 }
 
-function evaluateGroupedKeywords({
-  normalizedResponse,
-  requiredKeywordGroups,
-  optionalKeywordGroups,
-}: {
-  normalizedResponse: string
-  requiredKeywordGroups: KeywordGroup[]
-  optionalKeywordGroups: KeywordGroup[]
-}) {
-  const matchedRequiredKeywords: string[] = []
-  const missingRequiredGroups: string[] = []
-
-  for (const group of requiredKeywordGroups) {
-    const matchedKeyword = group.keywords.find((keyword) =>
-      keywordExistsInText(normalizedResponse, keyword)
-    )
-
-    if (matchedKeyword) {
-      matchedRequiredKeywords.push(matchedKeyword)
-    } else {
-      missingRequiredGroups.push(group.label)
-    }
-  }
-
-  const matchedOptionalKeywords: string[] = []
-
-  for (const group of optionalKeywordGroups) {
-    const matchedKeyword = group.keywords.find((keyword) =>
-      keywordExistsInText(normalizedResponse, keyword)
-    )
-
-    if (matchedKeyword) {
-      matchedOptionalKeywords.push(matchedKeyword)
-    }
-  }
-
-  const requiredMatchRatio =
-    requiredKeywordGroups.length === 0
-      ? 0
-      : matchedRequiredKeywords.length / requiredKeywordGroups.length
-
+function createEmptyDetails(): RuleBasedEvaluationResult['evaluationDetails'] {
   return {
-    matchedRequiredKeywords,
-    matchedOptionalKeywords,
-    missingRequiredGroups,
-    requiredMatchRatio,
-  }
-}
-
-function evaluateFlatKeywords({
-  normalizedResponse,
-  requiredKeywords,
-  optionalKeywords,
-}: {
-  normalizedResponse: string
-  requiredKeywords: string[]
-  optionalKeywords: string[]
-}) {
-  const cleanRequiredKeywords = cleanKeywordList(requiredKeywords)
-  const cleanOptionalKeywords = cleanKeywordList(optionalKeywords)
-
-  const matchedRequiredKeywords = cleanRequiredKeywords.filter((keyword) =>
-    keywordExistsInText(normalizedResponse, keyword)
-  )
-
-  const matchedOptionalKeywords = cleanOptionalKeywords.filter((keyword) =>
-    keywordExistsInText(normalizedResponse, keyword)
-  )
-
-  const missingRequiredKeywords = cleanRequiredKeywords.filter(
-    (keyword) => !matchedRequiredKeywords.includes(keyword)
-  )
-
-  const requiredMatchRatio =
-    cleanRequiredKeywords.length === 0
-      ? 0
-      : matchedRequiredKeywords.length / cleanRequiredKeywords.length
-
-  return {
-    cleanRequiredKeywords,
-    matchedRequiredKeywords,
-    matchedOptionalKeywords,
-    missingRequiredKeywords,
-    requiredMatchRatio,
+    totalRequired: 0,
+    matchedRequired: 0,
+    categories: {},
   }
 }
 
@@ -162,95 +125,143 @@ export function evaluateWithRuleBasedLayer({
   optionalKeywords = [],
   requiredKeywordGroups,
   optionalKeywordGroups,
+  maxScore,
+  passScore,
 }: RuleBasedEvaluatorInput): RuleBasedEvaluationResult {
   const normalizedResponse = normalizeText(studentResponse)
-
   const cleanRequiredKeywordGroups = cleanKeywordGroups(requiredKeywordGroups)
   const cleanOptionalKeywordGroups = cleanKeywordGroups(optionalKeywordGroups)
 
   if (cleanRequiredKeywordGroups.length > 0) {
-    const {
-      matchedRequiredKeywords,
-      matchedOptionalKeywords,
-      missingRequiredGroups,
-      requiredMatchRatio,
-    } = evaluateGroupedKeywords({
-      normalizedResponse,
-      requiredKeywordGroups: cleanRequiredKeywordGroups,
-      optionalKeywordGroups: cleanOptionalKeywordGroups,
-    })
+    const matchedRequiredKeywords: string[] = []
+    const matchedElements: string[] = []
+    const missingRequiredGroups: string[] = []
+    const details = createEmptyDetails()
 
-    if (requiredMatchRatio === 1) {
-      return {
-        score: 'correct',
-        reasoning:
-          'Rule-based evaluation passed. The response contains all required clinical concept groups for this scenario.',
-        missing_elements: [],
-        matchedRequiredKeywords,
-        matchedOptionalKeywords,
-        requiredMatchRatio,
-        shouldUseLLM: false,
+    const rubricMaxScore =
+      maxScore ??
+      cleanRequiredKeywordGroups.reduce(
+        (total, group) => total + (group.points ?? 1),
+        0
+      )
+    const rubricPassScore = passScore ?? rubricMaxScore
+
+    details.totalRequired = cleanRequiredKeywordGroups.length
+
+    for (const group of cleanRequiredKeywordGroups) {
+      const category = group.category || 'General'
+      details.categories[category] ??= { score: 0, maxScore: 0 }
+      details.categories[category].maxScore += group.points ?? 1
+
+      const matchedKeyword = group.keywords.find((keyword) =>
+        keywordExistsInText(
+          normalizedResponse,
+          keyword,
+          group.avoidNegation ?? true
+        )
+      )
+
+      if (matchedKeyword) {
+        details.matchedRequired += 1
+        details.categories[category].score += group.points ?? 1
+        matchedRequiredKeywords.push(matchedKeyword)
+        matchedElements.push(group.label)
+      } else {
+        missingRequiredGroups.push(group.label)
       }
     }
 
+    const matchedOptionalKeywords: string[] = []
+
+    for (const group of cleanOptionalKeywordGroups) {
+      const matchedKeyword = group.keywords.find((keyword) =>
+        keywordExistsInText(
+          normalizedResponse,
+          keyword,
+          group.avoidNegation ?? true
+        )
+      )
+
+      if (matchedKeyword) {
+        matchedOptionalKeywords.push(matchedKeyword)
+      }
+    }
+
+    const numericScore = Object.values(details.categories).reduce(
+      (total, category) => total + category.score,
+      0
+    )
+    const requiredMatchRatio =
+      cleanRequiredKeywordGroups.length === 0
+        ? 0
+        : details.matchedRequired / cleanRequiredKeywordGroups.length
+    const passed = numericScore >= rubricPassScore
+
     return {
-      score: requiredMatchRatio > 0 ? 'partial' : 'incorrect',
-      reasoning:
-        'Rule-based evaluation found missing required clinical concept groups. Semantic AI evaluation is required to check whether the student used equivalent clinical wording.',
+      score: passed
+        ? 'correct'
+        : numericScore > 0
+          ? 'partial'
+          : 'incorrect',
+      reasoning: passed
+        ? `ผ่านเกณฑ์ตาม rubric ได้ ${numericScore}/${rubricMaxScore} คะแนน`
+        : `ยังไม่ผ่านเกณฑ์ตาม rubric ได้ ${numericScore}/${rubricMaxScore} คะแนน ต้องได้อย่างน้อย ${rubricPassScore} คะแนน`,
       missing_elements: missingRequiredGroups,
       matchedRequiredKeywords,
       matchedOptionalKeywords,
       requiredMatchRatio,
-      shouldUseLLM: true,
+      shouldUseLLM: !passed && missingRequiredGroups.length > 0,
+      numericScore,
+      maxScore: rubricMaxScore,
+      passScore: rubricPassScore,
+      matchedElements,
+      evaluationDetails: details,
     }
   }
 
-  const {
-    cleanRequiredKeywords,
-    matchedRequiredKeywords,
-    matchedOptionalKeywords,
-    missingRequiredKeywords,
-    requiredMatchRatio,
-  } = evaluateFlatKeywords({
-    normalizedResponse,
-    requiredKeywords,
-    optionalKeywords,
-  })
-
-  if (cleanRequiredKeywords.length > 0 && requiredMatchRatio === 1) {
-    return {
-      score: 'correct',
-      reasoning:
-        'Rule-based evaluation passed. The response contains all required clinical keywords for this scenario.',
-      missing_elements: [],
-      matchedRequiredKeywords,
-      matchedOptionalKeywords,
-      requiredMatchRatio,
-      shouldUseLLM: false,
-    }
-  }
-
-  if (cleanRequiredKeywords.length === 0) {
-    return {
-      score: 'partial',
-      reasoning:
-        'No required keywords are configured for this scenario. Semantic AI evaluation is required.',
-      missing_elements: [],
-      matchedRequiredKeywords,
-      matchedOptionalKeywords,
-      requiredMatchRatio,
-      shouldUseLLM: true,
-    }
-  }
+  const cleanRequiredKeywords = cleanKeywordList(requiredKeywords)
+  const cleanOptionalKeywords = cleanKeywordList(optionalKeywords)
+  const matchedRequiredKeywords = cleanRequiredKeywords.filter((keyword) =>
+    keywordExistsInText(normalizedResponse, keyword)
+  )
+  const matchedOptionalKeywords = cleanOptionalKeywords.filter((keyword) =>
+    keywordExistsInText(normalizedResponse, keyword)
+  )
+  const missingRequiredKeywords = cleanRequiredKeywords.filter(
+    (keyword) => !matchedRequiredKeywords.includes(keyword)
+  )
+  const requiredMatchRatio =
+    cleanRequiredKeywords.length === 0
+      ? 0
+      : matchedRequiredKeywords.length / cleanRequiredKeywords.length
+  const rubricMaxScore = maxScore ?? cleanRequiredKeywords.length
+  const rubricPassScore = passScore ?? rubricMaxScore
+  const numericScore = matchedRequiredKeywords.length
+  const passed = cleanRequiredKeywords.length > 0 && numericScore >= rubricPassScore
 
   return {
-    score: requiredMatchRatio > 0 ? 'partial' : 'incorrect',
-    reasoning:
-      'Rule-based evaluation found missing required keywords. Semantic AI evaluation is required to check whether the student used equivalent clinical wording.',
+    score: passed ? 'correct' : numericScore > 0 ? 'partial' : 'incorrect',
+    reasoning: passed
+      ? `ผ่านเกณฑ์ตาม keyword ได้ ${numericScore}/${rubricMaxScore} คะแนน`
+      : `ยังไม่ผ่านเกณฑ์ตาม keyword ได้ ${numericScore}/${rubricMaxScore} คะแนน`,
     missing_elements: missingRequiredKeywords,
     matchedRequiredKeywords,
     matchedOptionalKeywords,
     requiredMatchRatio,
-    shouldUseLLM: true,
+    shouldUseLLM: !passed,
+    numericScore,
+    maxScore: rubricMaxScore,
+    passScore: rubricPassScore,
+    matchedElements: matchedRequiredKeywords,
+    evaluationDetails: {
+      totalRequired: cleanRequiredKeywords.length,
+      matchedRequired: matchedRequiredKeywords.length,
+      categories: {
+        General: {
+          score: numericScore,
+          maxScore: rubricMaxScore,
+        },
+      },
+    },
   }
 }

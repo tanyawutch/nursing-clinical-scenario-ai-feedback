@@ -13,10 +13,15 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is missing. Check your environment variables.");
 }
 
+const needsSupabasePoolerSsl =
+  process.env.DATABASE_URL.includes("supabase.com") ||
+  process.env.DATABASE_URL.includes("pooler.supabase.com");
+
 const pool =
   globalForPrisma.prismaPool ??
   new Pool({
     connectionString: process.env.DATABASE_URL,
+    ssl: needsSupabasePoolerSsl ? { rejectUnauthorized: false } : undefined,
   });
 
 const adapter = new PrismaPg(pool);

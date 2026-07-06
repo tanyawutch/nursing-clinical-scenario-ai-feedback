@@ -1,12 +1,30 @@
 'use client'
 
+import Image from 'next/image'
 import { useMemo, useState, useTransition } from 'react'
 import { resetScenarioPractice, submitScenarioStepAnswer } from './actions'
 
-const MAX_STEP_ANSWER_LENGTH = 2000
-const MAX_STEP_ATTEMPTS = 3
+const MAX_STEP_ANSWER_LENGTH = 4000
+const MAX_STEP_ATTEMPTS = 2
 const BACK_PAIN_SCENARIO_ID = 'back-pain-scenario-001'
 const BACK_PAIN_IMAGE_PATH = '/scenarios/back-pain/back-pain-clinical-scene.png'
+
+type PageLanguage = 'th' | 'en'
+
+type FormField = {
+  id: string
+  labelTh: string
+  labelEn: string
+  placeholderTh: string
+  placeholderEn: string
+  rows?: number
+}
+
+type StepFormSchema = {
+  instructionTh?: string
+  instructionEn?: string
+  fields?: FormField[]
+}
 
 type ScenarioStepPracticeStep = {
   id: string
@@ -14,6 +32,9 @@ type ScenarioStepPracticeStep = {
   title: string
   prompt: string
   modelAnswer: string | null
+  maxScore: number
+  passScore: number
+  formSchema: unknown
 }
 
 type ScenarioStepPracticeResult = {
@@ -22,56 +43,70 @@ type ScenarioStepPracticeResult = {
   aiReasoning: string | null
   aiMissingElements: string[]
   aiStatus: string
+  numericScore: number | null
+  maxScore: number | null
+  matchedElements: string[]
+  evaluationDetails: unknown
   attemptCount: number
   isLocked: boolean
   modelAnswerRevealed: boolean
 } | null
 
 type ScenarioStepPracticeProps = {
+  lang: PageLanguage
   scenarioId: string
   step: ScenarioStepPracticeStep | null
   latestAttemptStep: ScenarioStepPracticeResult
 }
 
-type SpeechRecognitionAlternative = {
-  transcript: string
+function isFormSchema(value: unknown): value is StepFormSchema {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const schema = value as StepFormSchema
+
+  return schema.fields === undefined || Array.isArray(schema.fields)
 }
 
-type SpeechRecognitionResult = {
-  0: SpeechRecognitionAlternative
+function getFields(schema: unknown) {
+  if (!isFormSchema(schema) || !schema.fields) {
+    return []
+  }
+
+  return schema.fields.filter((field): field is FormField => {
+    return (
+      typeof field.id === 'string' &&
+      typeof field.labelTh === 'string' &&
+      typeof field.labelEn === 'string' &&
+      typeof field.placeholderTh === 'string' &&
+      typeof field.placeholderEn === 'string'
+    )
+  })
 }
 
-type SpeechRecognitionResultList = {
-  length: number
-  item(index: number): SpeechRecognitionResult
-  [index: number]: SpeechRecognitionResult
+function getInstruction(schema: unknown, lang: PageLanguage) {
+  if (!isFormSchema(schema)) {
+    return ''
+  }
+
+  return lang === 'th'
+    ? schema.instructionTh || ''
+    : schema.instructionEn || schema.instructionTh || ''
 }
 
-type SpeechRecognitionEvent = {
-  results: SpeechRecognitionResultList
-}
+function getScoreLabel(score: string | null, lang: PageLanguage) {
+  if (lang === 'en') {
+    if (score === 'correct') return 'Passed'
+    if (score === 'partial') return 'Needs review'
+    if (score === 'incorrect') return 'Not yet passed'
+    return 'Pending'
+  }
 
-type SpeechRecognitionErrorEvent = {
-  error: string
-}
-
-type SpeechRecognitionInstance = {
-  continuous: boolean
-  interimResults: boolean
-  maxAlternatives: number
-  lang: string
-  onstart: (() => void) | null
-  onresult: ((event: SpeechRecognitionEvent) => void) | null
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null
-  onend: (() => void) | null
-  start: () => void
-}
-
-type SpeechRecognitionConstructor = new () => SpeechRecognitionInstance
-
-type WindowWithSpeechRecognition = Window & {
-  SpeechRecognition?: SpeechRecognitionConstructor
-  webkitSpeechRecognition?: SpeechRecognitionConstructor
+  if (score === 'correct') return 'ผ่านเกณฑ์'
+  if (score === 'partial') return 'ต้องปรับปรุง'
+  if (score === 'incorrect') return 'ยังไม่ผ่าน'
+  return 'รอตรวจ'
 }
 
 function LoadingSpinner() {
@@ -83,248 +118,171 @@ function LoadingSpinner() {
   )
 }
 
-function getScoreLabel(score: string | null) {
-  if (score === 'correct') return 'Complete'
-  if (score === 'partial') return 'Review needed'
-  if (score === 'incorrect') return 'Needs more practice'
-  return 'Pending review'
-}
-
-function getScoreDescription(score: string | null) {
-  if (score === 'correct') {
-    return 'Your response includes the key nursing points for this step.'
+function buildCombinedAnswer(
+  fields: FormField[],
+  values: Record<string, string>,
+  lang: PageLanguage
+) {
+  if (fields.length === 0) {
+    return values.freeText?.trim() || ''
   }
 
-  if (score === 'partial') {
-    return 'Your response is on the right track, but some important nursing points still need to be improved.'
-  }
-
-  if (score === 'incorrect') {
-    return 'Please review the step question and include the missing clinical points before continuing.'
-  }
-
-  return 'The system is reviewing this step.'
-}
-
-function getMissingElementLabel(element: string) {
-  const labels: Record<string, string> = {
-    'pain location': 'ตำแหน่งที่ปวด / pain location',
-    'pain severity': 'ระดับความปวด / pain severity',
-    'pain onset': 'เวลาเริ่มปวด / pain onset',
-    'pain duration': 'ระยะเวลาที่ปวด / pain duration',
-  }
-
-  return labels[element.trim().toLowerCase()] ?? element
-}
-
-function getFeedbackTheme(score: string | null, status: string | undefined) {
-  if (status === 'failed') {
-    return {
-      card: 'border-red-300 bg-white',
-      accent: 'bg-red-600',
-      eyebrow: 'text-red-800',
-      title: 'text-red-900',
-      badge: 'border-red-300 bg-red-50 text-red-900',
-      inner: 'border-red-200 bg-slate-50',
-      missing: 'border-red-200 bg-white text-red-900',
-      missingAccent: 'border-l-red-600',
-    }
-  }
-
-  if (score === 'correct') {
-    return {
-      card: 'border-green-300 bg-white',
-      accent: 'bg-green-600',
-      eyebrow: 'text-green-800',
-      title: 'text-green-900',
-      badge: 'border-green-300 bg-green-50 text-green-900',
-      inner: 'border-green-200 bg-slate-50',
-      missing: 'border-green-200 bg-white text-green-900',
-      missingAccent: 'border-l-green-600',
-    }
-  }
-
-  if (score === 'partial') {
-    return {
-      card: 'border-slate-300 bg-white',
-      accent: 'bg-[#A73535]',
-      eyebrow: 'text-slate-700',
-      title: 'text-slate-950',
-      badge: 'border-slate-300 bg-slate-100 text-slate-900',
-      inner: 'border-slate-200 bg-slate-50',
-      missing: 'border-slate-200 bg-white text-slate-950',
-      missingAccent: 'border-l-[#A73535]',
-    }
-  }
-
-  if (score === 'incorrect') {
-    return {
-      card: 'border-red-300 bg-white',
-      accent: 'bg-red-600',
-      eyebrow: 'text-red-800',
-      title: 'text-red-900',
-      badge: 'border-red-300 bg-red-50 text-red-900',
-      inner: 'border-red-200 bg-slate-50',
-      missing: 'border-red-200 bg-white text-red-900',
-      missingAccent: 'border-l-red-600',
-    }
-  }
-
-  return {
-    card: 'border-slate-300 bg-white',
-    accent: 'bg-slate-700',
-    eyebrow: 'text-slate-700',
-    title: 'text-slate-950',
-    badge: 'border-slate-300 bg-slate-100 text-slate-900',
-    inner: 'border-slate-200 bg-slate-50',
-    missing: 'border-slate-200 bg-white text-slate-900',
-    missingAccent: 'border-l-slate-600',
-  }
+  return fields
+    .filter((field) => values[field.id]?.trim())
+    .map((field) => {
+      const label = lang === 'th' ? field.labelTh : field.labelEn
+      return `${label}:\n${values[field.id].trim()}`
+    })
+    .join('\n\n')
+    .trim()
 }
 
 export default function ScenarioStepPractice({
+  lang,
   scenarioId,
   step,
   latestAttemptStep,
 }: ScenarioStepPracticeProps) {
-  const [answer, setAnswer] = useState(latestAttemptStep?.answer || '')
-  const [speechError, setSpeechError] = useState('')
-  const [isListening, setIsListening] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [isResetPending, startResetTransition] = useTransition()
+  const fields = useMemo(() => getFields(step?.formSchema), [step?.formSchema])
+  const [answers, setAnswers] = useState<Record<string, string>>(() => {
+    if (fields.length === 0) {
+      return { freeText: latestAttemptStep?.answer || '' }
+    }
 
-  const usedAttempts = latestAttemptStep?.attemptCount ?? 0
-  const remainingAttempts = useMemo(() => {
-    return Math.max(MAX_STEP_ATTEMPTS - usedAttempts, 0)
-  }, [usedAttempts])
+    return Object.fromEntries(fields.map((field) => [field.id, '']))
+  })
+
+  const copy = {
+    th: {
+      noStep: 'ยังไม่ได้ตั้งค่าแบบฝึกสำหรับสถานการณ์นี้',
+      practice: 'แบบฝึกตาม rubric',
+      attempt: 'ครั้งที่',
+      noAttempts: 'ยังไม่ได้ส่งคำตอบ',
+      finalAttempt: 'ส่งได้อีกครั้งสุดท้าย',
+      restart: 'เริ่มทำใหม่',
+      restarting: 'กำลังเริ่มใหม่...',
+      answer: 'คำตอบของนักศึกษา',
+      answerHelp:
+        'กรอกคำตอบเป็นภาษาไทยเป็นหลัก สามารถใช้คำศัพท์อังกฤษทางคลินิกได้',
+      remaining: 'จำนวนครั้งที่เหลือ',
+      submit: 'ส่งคำตอบ',
+      resubmit: 'ส่งคำตอบอีกครั้ง',
+      checking: 'กำลังตรวจคำตอบ...',
+      locked: 'ข้อนี้ถูกล็อกแล้ว',
+      feedback: 'ผลตรวจครั้งล่าสุด',
+      summary: 'สรุป feedback',
+      missing: 'ประเด็นที่ควรเพิ่ม',
+      matched: 'ประเด็นที่ตรวจพบ',
+      modelAnswer: 'เฉลยอ้างอิง',
+      score: 'คะแนน',
+      passScore: 'เกณฑ์ผ่าน',
+      clinicalScene: 'ภาพประกอบสถานการณ์',
+      clinicalSceneText:
+        'ใช้ข้อมูลผู้ป่วยและภาพประกอบนี้เป็นบริบทในการตอบตาม rubric',
+      freePlaceholder: 'พิมพ์คำตอบของคุณที่นี่',
+    },
+    en: {
+      noStep: 'Step-by-step practice is not configured for this scenario.',
+      practice: 'Rubric practice',
+      attempt: 'Attempt',
+      noAttempts: 'No attempts yet',
+      finalAttempt: 'Final attempt next',
+      restart: 'Restart practice',
+      restarting: 'Restarting...',
+      answer: 'Student response',
+      answerHelp:
+        'Thai is the primary language, but clinical English terms are supported.',
+      remaining: 'Remaining attempts',
+      submit: 'Submit response',
+      resubmit: 'Resubmit response',
+      checking: 'Checking response...',
+      locked: 'Step locked',
+      feedback: 'Latest submission result',
+      summary: 'Feedback summary',
+      missing: 'Points to improve',
+      matched: 'Matched concepts',
+      modelAnswer: 'Reference answer',
+      score: 'Score',
+      passScore: 'Pass score',
+      clinicalScene: 'Clinical scene',
+      clinicalSceneText:
+        'Use this patient information and scene as context for the rubric task.',
+      freePlaceholder: 'Type your answer here',
+    },
+  }[lang]
 
   if (!step) {
     return (
       <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 shadow-sm sm:p-8">
         <p className="text-base font-semibold text-slate-950">
-          Step-by-step practice is not configured for this scenario yet.
-        </p>
-        <p className="mt-2 text-sm leading-6 text-slate-700">
-          This scenario can still be completed using the final assessment form.
+          {copy.noStep}
         </p>
       </section>
     )
   }
 
-  const isBackPainScenario = scenarioId === BACK_PAIN_SCENARIO_ID
+  const usedAttempts = latestAttemptStep?.attemptCount ?? 0
+  const remainingAttempts = Math.max(MAX_STEP_ATTEMPTS - usedAttempts, 0)
   const isLocked = latestAttemptStep?.isLocked ?? false
   const isFinalAttemptNext = remainingAttempts === 1 && !isLocked
-  const isNeedsRetry =
-    latestAttemptStep !== null &&
-    !isLocked &&
-    (latestAttemptStep.aiScore === 'partial' ||
-      latestAttemptStep.aiScore === 'incorrect' ||
-      latestAttemptStep.aiStatus === 'failed')
-
+  const combinedAnswer = buildCombinedAnswer(fields, answers, lang)
   const isSubmitDisabled =
     isPending ||
     isResetPending ||
-    isListening ||
     isLocked ||
-    answer.trim().length === 0
+    combinedAnswer.trim().length === 0 ||
+    combinedAnswer.length > MAX_STEP_ANSWER_LENGTH
+  const displayedScore = latestAttemptStep?.numericScore ?? 0
+  const displayedMaxScore = latestAttemptStep?.maxScore ?? step.maxScore
 
-  const feedbackTheme = getFeedbackTheme(
-    latestAttemptStep?.aiScore ?? null,
-    latestAttemptStep?.aiStatus
-  )
-
-  function startThaiVoiceInput() {
-    setSpeechError('')
-
-    const speechWindow = window as WindowWithSpeechRecognition
-    const SpeechRecognition =
-      speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition
-
-    if (!SpeechRecognition) {
-      setSpeechError(
-        'Voice input is not supported in this browser. Please type your answer instead.'
-      )
-      return
-    }
-
-    const recognition = new SpeechRecognition()
-
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.maxAlternatives = 1
-    recognition.lang = 'th-TH'
-
-    recognition.onstart = () => {
-      setIsListening(true)
-    }
-
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      setSpeechError(`Voice input stopped: ${event.error}`)
-      setIsListening(false)
-    }
-
-    recognition.onend = () => {
-      setIsListening(false)
-    }
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0]?.[0]?.transcript || ''
-
-      if (!transcript.trim()) {
-        return
-      }
-
-      setAnswer((currentAnswer) => {
-        const nextAnswer = currentAnswer
-          ? `${currentAnswer.trim()} ${transcript.trim()}`
-          : transcript.trim()
-
-        return nextAnswer.slice(0, MAX_STEP_ANSWER_LENGTH)
-      })
-    }
-
-    try {
-      recognition.start()
-    } catch {
-      setSpeechError(
-        'Voice input could not start. Please try again or type your answer.'
-      )
-      setIsListening(false)
-    }
+  function updateAnswer(fieldId: string, value: string) {
+    setAnswers((current) => ({
+      ...current,
+      [fieldId]: value.slice(0, MAX_STEP_ANSWER_LENGTH),
+    }))
   }
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 bg-white px-6 py-6 sm:px-8">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#A73535]">
-              Step-by-step practice
+              {copy.practice}
             </p>
 
             <h2 className="mt-3 text-2xl font-bold leading-8 text-slate-950 sm:text-3xl">
-              Step {step.order}: {step.title}
+              {lang === 'th' ? `งานที่ ${step.order}: ` : `Task ${step.order}: `}
+              {step.title}
             </h2>
 
-            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-800">
+            <p className="mt-3 max-w-4xl text-base leading-7 text-slate-800">
               {step.prompt}
             </p>
+
+            {getInstruction(step.formSchema, lang) ? (
+              <p className="mt-3 max-w-4xl rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-950">
+                {getInstruction(step.formSchema, lang)}
+              </p>
+            ) : null}
           </div>
 
-          <div className="flex w-fit flex-col gap-2 sm:items-end">
-            {usedAttempts > 0 ? (
-              <div className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900 shadow-sm">
-                Attempt {usedAttempts}/{MAX_STEP_ATTEMPTS}
-              </div>
-            ) : (
-              <div className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900 shadow-sm">
-                No attempts yet
-              </div>
-            )}
+          <div className="flex w-fit flex-col gap-2 lg:items-end">
+            <div className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900 shadow-sm">
+              {usedAttempts > 0
+                ? `${copy.attempt} ${usedAttempts}/${MAX_STEP_ATTEMPTS}`
+                : copy.noAttempts}
+            </div>
+
+            <div className="rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-bold text-slate-800">
+              {copy.passScore}: {step.passScore}/{step.maxScore}
+            </div>
 
             {isFinalAttemptNext ? (
               <div className="rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-sm font-bold text-red-900 shadow-sm">
-                Final attempt next
+                {copy.finalAttempt}
               </div>
             ) : null}
 
@@ -337,13 +295,13 @@ export default function ScenarioStepPractice({
                 }}
               >
                 <input type="hidden" name="scenarioId" value={scenarioId} />
-
+                <input type="hidden" name="lang" value={lang} />
                 <button
                   type="submit"
                   disabled={isPending || isResetPending}
                   className="mt-1 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 transition hover:border-[#A73535]/50 hover:bg-slate-50 hover:text-[#A73535] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isResetPending ? 'Restarting...' : 'Restart Practice'}
+                  {isResetPending ? copy.restarting : copy.restart}
                 </button>
               </form>
             ) : null}
@@ -352,38 +310,34 @@ export default function ScenarioStepPractice({
       </div>
 
       <div className="p-6 sm:p-8">
-        {isBackPainScenario ? (
+        {scenarioId === BACK_PAIN_SCENARIO_ID ? (
           <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
               <div className="flex min-h-[280px] items-end justify-center bg-slate-100 px-6 pt-8">
-                <img
+                <Image
                   src={BACK_PAIN_IMAGE_PATH}
-                  alt="Illustrated older female patient seated during a lower back pain clinical scenario"
+                  alt="Back pain clinical scenario"
+                  width={520}
+                  height={340}
                   className="max-h-[340px] w-full max-w-[520px] object-contain"
+                  priority
                 />
               </div>
 
-              <div className="flex flex-col justify-center border-t border-slate-200 bg-white p-6 lg:border-l lg:border-t-0 sm:p-7">
+              <div className="flex flex-col justify-center border-t border-slate-200 bg-white p-6 sm:p-7 lg:border-l lg:border-t-0">
                 <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#A73535]">
-                  Clinical scene
+                  {copy.clinicalScene}
                 </p>
 
                 <h3 className="mt-3 text-xl font-bold leading-7 text-slate-950">
-                  Patient presentation for focused assessment
+                  {lang === 'th'
+                    ? 'ผู้ป่วยหญิงอายุ 55 ปี มีอาการปวดหลังใน OPD'
+                    : '55-year-old female patient with back pain in OPD'}
                 </h3>
 
                 <p className="mt-3 text-base leading-7 text-slate-800">
-                  Use this scene as context for the current step. Focus on
-                  asking clear assessment questions before giving nursing
-                  advice.
+                  {copy.clinicalSceneText}
                 </p>
-
-                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <p className="text-sm font-semibold leading-6 text-slate-700">
-                    Demo note: privacy-safe illustrated clinical visual for the
-                    Back Pain scenario.
-                  </p>
-                </div>
               </div>
             </div>
           </div>
@@ -399,113 +353,90 @@ export default function ScenarioStepPractice({
         >
           <input type="hidden" name="scenarioId" value={scenarioId} />
           <input type="hidden" name="scenarioStepId" value={step.id} />
+          <input type="hidden" name="lang" value={lang} />
+          <input type="hidden" name="answer" value={combinedAnswer} />
 
           <div>
-            <label
-              htmlFor="step-answer"
-              className="text-lg font-bold text-slate-950"
-            >
-              Student response
-            </label>
+            <h3 className="text-lg font-bold text-slate-950">
+              {copy.answer}
+            </h3>
 
             <p className="mt-2 text-base leading-7 text-slate-800">
-              Answer clearly in Thai or English. Focus on the key nursing
-              assessment and care points for this step.
+              {copy.answerHelp}
             </p>
 
-            {isNeedsRetry ? (
-              <div className="mt-3 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-sm font-semibold leading-6 text-slate-900">
-                Edit your answer in the box below, then submit again to improve
-                this step.
-              </div>
-            ) : null}
-
-            <div className="relative mt-3">
-              <textarea
-                id="step-answer"
-                name="answer"
-                value={answer}
-                onChange={(event) => {
-                  setAnswer(event.target.value)
-                }}
-                maxLength={MAX_STEP_ANSWER_LENGTH}
-                disabled={isLocked || isPending || isResetPending}
-                rows={7}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#A73535] focus:ring-4 focus:ring-[#A73535]/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-700"
-                placeholder="Type your clinical response here. You can also use Thai voice input if your browser supports it."
-              />
-
-              {isPending ? (
-                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/75 backdrop-blur-[1px]">
-                  <div className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm">
-                    Reviewing your response...
-                  </div>
-                </div>
-              ) : null}
-
-              {isResetPending ? (
-                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/75 backdrop-blur-[1px]">
-                  <div className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm">
-                    Restarting practice...
-                  </div>
-                </div>
-              ) : null}
+            <div className="mt-4 grid gap-4">
+              {fields.length > 0 ? (
+                fields.map((field) => (
+                  <label key={field.id} className="block">
+                    <span className="text-sm font-bold text-slate-900">
+                      {lang === 'th' ? field.labelTh : field.labelEn}
+                    </span>
+                    <textarea
+                      value={answers[field.id] ?? ''}
+                      onChange={(event) => {
+                        updateAnswer(field.id, event.target.value)
+                      }}
+                      disabled={isLocked || isPending || isResetPending}
+                      rows={field.rows ?? 4}
+                      className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#A73535] focus:ring-4 focus:ring-[#A73535]/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-700"
+                      placeholder={
+                        lang === 'th'
+                          ? field.placeholderTh
+                          : field.placeholderEn
+                      }
+                    />
+                  </label>
+                ))
+              ) : (
+                <textarea
+                  value={answers.freeText ?? ''}
+                  onChange={(event) => {
+                    updateAnswer('freeText', event.target.value)
+                  }}
+                  disabled={isLocked || isPending || isResetPending}
+                  rows={8}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#A73535] focus:ring-4 focus:ring-[#A73535]/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-700"
+                  placeholder={copy.freePlaceholder}
+                />
+              )}
             </div>
 
             <div className="mt-3 flex flex-col justify-between gap-2 text-sm sm:flex-row sm:items-center">
               <p className="font-semibold text-slate-700">
-                {answer.length}/{MAX_STEP_ANSWER_LENGTH} characters
+                {combinedAnswer.length}/{MAX_STEP_ANSWER_LENGTH}
               </p>
 
               <p
                 className={`font-bold ${
-                  remainingAttempts === 0
+                  remainingAttempts === 0 || isFinalAttemptNext
                     ? 'text-red-800'
-                    : isFinalAttemptNext
-                      ? 'text-red-800'
-                      : 'text-slate-700'
+                    : 'text-slate-700'
                 }`}
               >
-                Remaining attempts: {remainingAttempts}
+                {copy.remaining}: {remainingAttempts}
               </p>
             </div>
           </div>
 
-          {speechError ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-900">
-              {speechError}
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={startThaiVoiceInput}
-              disabled={isListening || isLocked || isPending || isResetPending}
-              className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#A73535]/40 hover:bg-slate-50 hover:text-[#A73535] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isListening ? 'Listening...' : 'Use Thai voice input'}
-            </button>
-
-            <button
-              type="submit"
-              disabled={isSubmitDisabled}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#A73535] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#8E2B2B] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPending ? (
-                <>
-                  <LoadingSpinner />
-                  Checking response...
-                </>
-              ) : isLocked ? (
-                'Step locked'
-              ) : latestAttemptStep ? (
-                'Resubmit response'
-              ) : (
-                'Submit response'
-              )}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isSubmitDisabled}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#A73535] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#8E2B2B] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isPending ? (
+              <>
+                <LoadingSpinner />
+                {copy.checking}
+              </>
+            ) : isLocked ? (
+              copy.locked
+            ) : latestAttemptStep ? (
+              copy.resubmit
+            ) : (
+              copy.submit
+            )}
+          </button>
         </form>
 
         {latestAttemptStep ? (
@@ -513,99 +444,84 @@ export default function ScenarioStepPractice({
             <div className="mb-5 flex items-center gap-4">
               <div className="h-px flex-1 bg-slate-200" />
               <div className="rounded-full border border-slate-300 bg-white px-4 py-1.5 text-sm font-bold uppercase tracking-[0.12em] text-slate-700">
-                Guidance from last attempt
+                {copy.feedback}
               </div>
               <div className="h-px flex-1 bg-slate-200" />
             </div>
 
-            <div
-              className={`overflow-hidden rounded-2xl border-2 shadow-sm ${feedbackTheme.card}`}
-            >
-              <div className={`h-2 w-full ${feedbackTheme.accent}`} />
+            <div className="overflow-hidden rounded-2xl border-2 border-slate-300 bg-white shadow-sm">
+              <div
+                className={`h-2 w-full ${
+                  latestAttemptStep.aiScore === 'correct'
+                    ? 'bg-green-600'
+                    : latestAttemptStep.aiScore === 'incorrect'
+                      ? 'bg-red-600'
+                      : 'bg-[#A73535]'
+                }`}
+              />
 
               <div className="p-5 sm:p-6">
-                <div className="flex flex-col gap-3">
-                  <p
-                    className={`text-sm font-bold uppercase tracking-[0.12em] ${feedbackTheme.eyebrow}`}
-                  >
-                    Latest submission result
-                  </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h3 className="text-2xl font-bold text-slate-950">
+                    {getScoreLabel(latestAttemptStep.aiScore, lang)}
+                  </h3>
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3
-                      className={`text-2xl font-bold ${feedbackTheme.title}`}
-                    >
-                      {getScoreLabel(latestAttemptStep.aiScore)}
-                    </h3>
+                  <span className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900">
+                    {copy.score}: {displayedScore}/{displayedMaxScore}
+                  </span>
 
-                    <span
-                      className={`rounded-full border px-4 py-1.5 text-sm font-bold ${feedbackTheme.badge}`}
-                    >
-                      {latestAttemptStep.isLocked ? 'Locked' : 'Try again'}
-                    </span>
-
-                    <span className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900">
-                      Attempt {latestAttemptStep.attemptCount} of{' '}
-                      {MAX_STEP_ATTEMPTS} reviewed
-                    </span>
-                  </div>
-
-                  <p className="text-base leading-7 text-slate-800">
-                    {getScoreDescription(latestAttemptStep.aiScore)}
-                  </p>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm font-bold text-slate-700">
+                    {copy.passScore}: {step.passScore}/{step.maxScore}
+                  </span>
                 </div>
 
-                <div
-                  className={`mt-5 rounded-xl border p-4 ${feedbackTheme.inner}`}
-                >
+                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm font-bold text-slate-950">
-                    Feedback summary
+                    {copy.summary}
                   </p>
-
-                  {latestAttemptStep.aiStatus === 'failed' ? (
-                    <p className="mt-2 text-base leading-7 text-slate-800">
-                      The system could not complete the review for this attempt.
-                      Please try again with a clearer answer.
-                    </p>
-                  ) : (
-                    <p className="mt-2 text-base leading-7 text-slate-800">
-                      {latestAttemptStep.aiReasoning ||
-                        'The system reviewed your response.'}
-                    </p>
-                  )}
+                  <p className="mt-2 text-base leading-7 text-slate-800">
+                    {latestAttemptStep.aiStatus === 'failed'
+                      ? lang === 'th'
+                        ? 'ระบบไม่สามารถตรวจคำตอบได้ กรุณาลองใหม่'
+                        : 'The system could not complete the review.'
+                      : latestAttemptStep.aiReasoning ||
+                        (lang === 'th'
+                          ? 'ระบบตรวจคำตอบแล้ว'
+                          : 'The system reviewed your response.')}
+                  </p>
                 </div>
+
+                {latestAttemptStep.matchedElements.length > 0 ? (
+                  <div className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4">
+                    <p className="text-sm font-bold text-green-950">
+                      {copy.matched}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {latestAttemptStep.matchedElements.map((element) => (
+                        <span
+                          key={element}
+                          className="rounded-full border border-green-200 bg-white px-3 py-1.5 text-xs font-bold text-green-900"
+                        >
+                          {element}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {latestAttemptStep.aiMissingElements.length > 0 ? (
-                  <div
-                    className={`mt-5 rounded-xl border border-slate-200 border-l-4 bg-white p-4 ${feedbackTheme.missingAccent}`}
-                  >
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm font-bold text-slate-950">
-                        Points to improve before the next attempt
-                      </p>
-
-                      <span
-                        className={`text-sm font-bold ${feedbackTheme.title}`}
-                      >
-                        {latestAttemptStep.aiMissingElements.length} missing
-                        point
-                        {latestAttemptStep.aiMissingElements.length > 1
-                          ? 's'
-                          : ''}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm font-bold text-red-950">
+                      {copy.missing}
+                    </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
                       {latestAttemptStep.aiMissingElements.map(
                         (element, index) => (
                           <div
                             key={`${element}-${index}`}
-                            className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold ${feedbackTheme.missing}`}
+                            className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-950"
                           >
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold shadow-sm">
-                              {index + 1}
-                            </span>
-                            <span>{getMissingElementLabel(element)}</span>
+                            {index + 1}. {element}
                           </div>
                         )
                       )}
@@ -616,10 +532,9 @@ export default function ScenarioStepPractice({
                 {latestAttemptStep.modelAnswerRevealed && step.modelAnswer ? (
                   <div className="mt-5 rounded-xl border border-slate-300 bg-slate-50 p-4">
                     <p className="text-sm font-bold text-slate-950">
-                      Learning reference answer
+                      {copy.modelAnswer}
                     </p>
-
-                    <p className="mt-2 text-base leading-7 text-slate-900">
+                    <p className="mt-2 whitespace-pre-line text-base leading-7 text-slate-900">
                       {step.modelAnswer}
                     </p>
                   </div>

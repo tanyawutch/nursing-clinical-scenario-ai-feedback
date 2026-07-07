@@ -43,10 +43,10 @@ function getResultContent(score: string | null): ResultContent {
       label: 'Needs Improvement',
       summary:
         'The response is partly correct, but some required clinical ideas should be added.',
-      accentColor: '#A73535',
-      badgeBg: '#fff5f5',
-      badgeText: '#A73535',
-      dotColor: '#A73535',
+      accentColor: '#F5821F',
+      badgeBg: '#FFF4E8',
+      badgeText: '#F5821F',
+      dotColor: '#F5821F',
     }
   }
 
@@ -56,10 +56,10 @@ function getResultContent(score: string | null): ResultContent {
       label: 'Needs Review',
       summary:
         'The response needs more clinical detail before it can be considered complete.',
-      accentColor: '#A73535',
+      accentColor: '#F5821F',
       badgeBg: '#fff1f2',
       badgeText: '#9f1239',
-      dotColor: '#A73535',
+      dotColor: '#F5821F',
     }
   }
 
@@ -142,7 +142,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     return (
       <main className="min-h-screen bg-slate-50 px-6 py-16 text-slate-900">
         <div className="mx-auto max-w-xl text-center">
-          <p className="text-base font-bold text-[#A73535]">
+          <p className="text-base font-bold text-[#F5821F]">
             Assessment record not found
           </p>
           <p className="mt-3 text-base leading-8 text-slate-800">
@@ -151,7 +151,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
           </p>
           <Link
             href="/dashboard"
-            className="mt-8 inline-flex rounded-full bg-[#A73535] px-7 py-3 text-sm font-bold text-white shadow-md shadow-[#A73535]/20 transition-all hover:-translate-y-0.5 hover:bg-[#8E2B2B]"
+            className="mt-8 inline-flex rounded-full bg-[#F5821F] px-7 py-3 text-sm font-bold text-white shadow-md shadow-[#F5821F]/20 transition-all hover:-translate-y-0.5 hover:bg-[#D96F14]"
           >
             Return to Dashboard
           </Link>
@@ -176,11 +176,11 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   const feedbackBorder = isPass ? 'border-green-200' : isFail ? 'border-rose-200' : 'border-slate-200'
   
   // Text Colors
-  const themeText = isPass ? 'text-green-700' : isFail ? 'text-[#A73535]' : 'text-slate-700'
-  const dotColor = isPass ? 'bg-green-600' : isFail ? 'bg-[#A73535]' : 'bg-slate-600'
+  const themeText = isPass ? 'text-green-700' : isFail ? 'text-[#F5821F]' : 'text-slate-700'
+  const dotColor = isPass ? 'bg-green-600' : isFail ? 'bg-[#F5821F]' : 'bg-slate-600'
 
   // Primary Button Theme
-  const btnBg = isPass ? 'bg-[#15803d] hover:bg-[#166534] shadow-green-700/25' : isFail ? 'bg-[#A73535] hover:bg-[#8E2B2B] shadow-[#A73535]/25' : 'bg-slate-700 hover:bg-slate-800 shadow-slate-700/25'
+  const btnBg = isPass ? 'bg-[#15803d] hover:bg-[#166534] shadow-green-700/25' : isFail ? 'bg-[#F5821F] hover:bg-[#D96F14] shadow-[#F5821F]/25' : 'bg-slate-700 hover:bg-slate-800 shadow-slate-700/25'
 
   return (
     <main className="min-h-screen bg-[#f8f9fa] text-slate-900 pb-20 font-sans">
@@ -300,7 +300,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
                 </div>
               ) : (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-100">
-                  <svg className="h-5 w-5 text-[#A73535]" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
+                  <svg className="h-5 w-5 text-[#F5821F]" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </div>

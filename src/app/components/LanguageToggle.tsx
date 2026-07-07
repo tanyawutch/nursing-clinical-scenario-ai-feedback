@@ -39,7 +39,7 @@ export default function LanguageToggle({
         href={buildHref({ pathname, searchParams, lang: 'th' })}
         className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
           lang === 'th'
-            ? 'bg-[#A73535] text-white'
+            ? 'bg-[#F5821F] text-white'
             : 'text-slate-700 hover:bg-slate-100'
         }`}
       >
@@ -49,7 +49,7 @@ export default function LanguageToggle({
         href={buildHref({ pathname, searchParams, lang: 'en' })}
         className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
           lang === 'en'
-            ? 'bg-[#A73535] text-white'
+            ? 'bg-[#F5821F] text-white'
             : 'text-slate-700 hover:bg-slate-100'
         }`}
       >

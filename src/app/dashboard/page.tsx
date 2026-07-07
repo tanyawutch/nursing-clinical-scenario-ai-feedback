@@ -161,8 +161,8 @@ function getStatusContent(status: ScenarioStatus, lang: PageLanguage) {
   return {
     label: lang === 'th' ? 'รอเนื้อหา' : 'Pending Content',
     buttonLabel: lang === 'th' ? 'รอข้อมูล' : 'Awaiting Content',
-    badgeClass: 'border-rose-200 bg-rose-50 text-[#A73535]',
-    dotClass: 'bg-[#A73535]',
+    badgeClass: 'border-rose-200 bg-rose-50 text-[#F5821F]',
+    dotClass: 'bg-[#F5821F]',
   }
 }
 
@@ -239,7 +239,7 @@ export default async function DashboardPage({
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#8C1515] shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F5821F] shadow-sm">
               <span className="text-xs font-bold tracking-wide text-white">
                 MFU
               </span>
@@ -255,9 +255,12 @@ export default async function DashboardPage({
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-xs font-bold text-slate-700 sm:text-sm">
+            <Link
+              href={`/dashboard/history?lang=${lang}`}
+              className="rounded-full border border-[#F5821F]/25 bg-[#FFF4E8] px-3.5 py-1.5 text-xs font-bold text-[#F5821F] transition hover:border-[#F5821F]/50 hover:bg-white sm:text-sm"
+            >
               ID: {studentId}
-            </span>
+            </Link>
             <LanguageToggle lang={lang} pathname="/dashboard" />
             <LogoutButton lang={lang} />
           </div>
@@ -268,7 +271,7 @@ export default async function DashboardPage({
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="grid gap-0 lg:grid-cols-[1.35fr_0.9fr]">
             <div className="px-6 py-8 sm:px-8 lg:px-10">
-              <span className="inline-flex items-center rounded-full border border-[#8C1515]/15 bg-[#fff5f5] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#8C1515]">
+              <span className="inline-flex items-center rounded-full border border-[#F5821F]/15 bg-[#FFF4E8] px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#F5821F]">
                 {copy.heroLabel}
               </span>
 
@@ -334,7 +337,7 @@ export default async function DashboardPage({
                   </p>
                   <Link
                     href={`/dashboard/scenario/back-pain-scenario-001?lang=${lang}`}
-                    className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#8C1515] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#741111] hover:shadow-md"
+                    className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#F5821F] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#D96F14] hover:shadow-md"
                   >
                     {lang === 'th' ? 'เข้าสู่แบบฝึก' : 'Start Practice'}
                   </Link>
@@ -362,11 +365,11 @@ export default async function DashboardPage({
               >
                 <div className="border-b border-slate-200 bg-slate-50/80 px-5 py-5 sm:px-6">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#8C1515] text-base font-bold text-white shadow-sm">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F5821F] text-base font-bold text-white shadow-sm">
                       {String(sectionIndex + 1).padStart(2, '0')}
                     </div>
                     <div>
-                      <p className="text-sm font-bold uppercase text-[#8C1515]">
+                      <p className="text-sm font-bold uppercase text-[#F5821F]">
                         Clinical Module
                       </p>
                       <h3 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">
@@ -425,7 +428,7 @@ export default async function DashboardPage({
                         {isReady && linkedScenario ? (
                           <Link
                             href={`/dashboard/scenario/${linkedScenario.id}?lang=${lang}`}
-                            className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#8C1515] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#741111] hover:shadow-md"
+                            className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-[#F5821F] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#D96F14] hover:shadow-md"
                           >
                             {status.buttonLabel}
                           </Link>

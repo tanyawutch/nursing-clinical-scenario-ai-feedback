@@ -92,7 +92,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#A73535] px-8 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-[#8F2C2C] focus:outline-none focus:ring-2 focus:ring-[#A73535] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F5821F] px-8 py-3.5 text-base font-bold text-white shadow-sm transition hover:bg-[#D96F14] focus:outline-none focus:ring-2 focus:ring-[#F5821F] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
     >
       {pending ? (
         <>
@@ -241,7 +241,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
               onChange={(event) => setDiagnosis(event.target.value)}
               placeholder="Type your diagnosis here or use voice input..."
               required
-              className="block w-full resize-none rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-16 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#A73535] focus:ring-4 focus:ring-[#A73535]/10"
+              className="block w-full resize-none rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-16 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#F5821F] focus:ring-4 focus:ring-[#F5821F]/10"
             />
 
             <button
@@ -250,8 +250,8 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
               disabled={isRecording}
               className={`absolute bottom-4 right-4 inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
                 isRecordingDiagnosis
-                  ? 'animate-pulse border-[#A73535] bg-[#A73535] text-white shadow-md'
-                  : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:text-[#A73535] disabled:cursor-not-allowed disabled:opacity-50'
+                  ? 'animate-pulse border-[#F5821F] bg-[#F5821F] text-white shadow-md'
+                  : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:text-[#F5821F] disabled:cursor-not-allowed disabled:opacity-50'
               }`}
               title="Start voice input for diagnosis"
               aria-label="Start voice input for diagnosis"
@@ -261,7 +261,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
           </div>
 
           {isRecordingDiagnosis ? (
-            <p className="mt-3 text-sm font-bold text-[#A73535] animate-pulse">
+            <p className="mt-3 text-sm font-bold text-[#F5821F] animate-pulse">
               Listening for diagnosis response...
             </p>
           ) : null}
@@ -295,7 +295,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
               onChange={(event) => setInterventions(event.target.value)}
               placeholder="List your interventions step-by-step or use voice input..."
               required
-              className="block w-full resize-none rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-16 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#A73535] focus:ring-4 focus:ring-[#A73535]/10"
+              className="block w-full resize-none rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-16 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#F5821F] focus:ring-4 focus:ring-[#F5821F]/10"
             />
 
             <button
@@ -304,8 +304,8 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
               disabled={isRecording}
               className={`absolute bottom-4 right-4 inline-flex h-11 w-11 items-center justify-center rounded-full border transition ${
                 isRecordingInterventions
-                  ? 'animate-pulse border-[#A73535] bg-[#A73535] text-white shadow-md'
-                  : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:text-[#A73535] disabled:cursor-not-allowed disabled:opacity-50'
+                  ? 'animate-pulse border-[#F5821F] bg-[#F5821F] text-white shadow-md'
+                  : 'border-slate-300 bg-slate-50 text-slate-600 hover:border-slate-400 hover:text-[#F5821F] disabled:cursor-not-allowed disabled:opacity-50'
               }`}
               title="Start voice input for interventions"
               aria-label="Start voice input for interventions"
@@ -315,7 +315,7 @@ export default function AssessmentForm({ scenarioId }: AssessmentFormProps) {
           </div>
 
           {isRecordingInterventions ? (
-            <p className="mt-3 text-sm font-bold text-[#A73535] animate-pulse">
+            <p className="mt-3 text-sm font-bold text-[#F5821F] animate-pulse">
               Listening for intervention response...
             </p>
           ) : null}

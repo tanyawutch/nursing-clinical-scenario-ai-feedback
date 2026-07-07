@@ -167,7 +167,7 @@ export default async function AssessmentPage({
         <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
           <Link
             href={`/dashboard?lang=${lang}`}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#A73535] transition-colors hover:text-[#8E2B2B]"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#F5821F] transition-colors hover:text-[#D96F14]"
           >
             <span aria-hidden="true">←</span>
             {copy.back}
@@ -175,7 +175,7 @@ export default async function AssessmentPage({
 
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-3 sm:flex">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#A73535]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[#F5821F]" />
               <span className="text-sm font-semibold text-slate-800">
                 {copy.assessment}
               </span>
@@ -195,7 +195,7 @@ export default async function AssessmentPage({
 
       <main className="mx-auto mt-6 w-full max-w-[1440px] space-y-6 px-5 sm:px-8 lg:px-10">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="bg-[#A73535] px-7 py-7 text-white sm:px-10">
+          <div className="bg-[#F5821F] px-7 py-7 text-white sm:px-10">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.12em] text-white">
@@ -217,7 +217,7 @@ export default async function AssessmentPage({
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                 <div className="flex items-start gap-4">
-                  <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#A73535] text-base font-bold text-white">
+                  <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F5821F] text-base font-bold text-white">
                     1
                   </div>
 
@@ -258,7 +258,7 @@ export default async function AssessmentPage({
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
           <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#A73535]">
+              <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#F5821F]">
                 {copy.workflowLabel}
               </p>
 
@@ -285,7 +285,7 @@ export default async function AssessmentPage({
                   key={step.id}
                   className={`flex min-h-[220px] flex-col rounded-2xl border p-5 shadow-sm transition ${
                     isActive
-                      ? 'border-[#A73535] bg-[#fff7f7] ring-2 ring-[#A73535]/10'
+                      ? 'border-[#F5821F] bg-[#FFF4E8] ring-2 ring-[#F5821F]/10'
                       : 'border-slate-200 bg-white'
                   }`}
                 >
@@ -314,8 +314,8 @@ export default async function AssessmentPage({
                     href={`/dashboard/scenario/${scenario.id}?stepId=${step.id}&lang=${lang}`}
                     className={`mt-4 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold transition ${
                       isActive
-                        ? 'bg-[#A73535] text-white'
-                        : 'border border-slate-300 bg-white text-slate-800 hover:border-[#A73535]/40 hover:text-[#A73535]'
+                        ? 'bg-[#F5821F] text-white'
+                        : 'border border-slate-300 bg-white text-slate-800 hover:border-[#F5821F]/40 hover:text-[#F5821F]'
                     }`}
                   >
                     {isActive ? copy.active : copy.start}

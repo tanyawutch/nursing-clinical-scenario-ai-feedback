@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import LanguageToggle from '@/app/components/LanguageToggle'
+import LogoutButton from '@/app/components/LogoutButton'
 import ScenarioStepPractice from './ScenarioStepPractice'
 import prisma from '@/utils/prisma'
 import { createClient } from '@/utils/supabase/server'
@@ -187,6 +188,7 @@ export default async function AssessmentPage({
                 stepId: targetStep?.id,
               }}
             />
+            <LogoutButton lang={lang} />
           </div>
         </div>
       </header>

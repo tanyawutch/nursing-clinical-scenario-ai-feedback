@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import LogoutButton from '@/app/components/LogoutButton'
 import { createClient } from '@/utils/supabase/server'
 import prisma from '@/utils/prisma'
 
@@ -200,7 +201,10 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
             </p>
           </div>
           <div className="hidden sm:block text-sm font-semibold text-slate-500">
-            Practice Assessment Feedback
+            <div className="flex items-center gap-3">
+              <span>Practice Assessment Feedback</span>
+              <LogoutButton lang="en" />
+            </div>
           </div>
         </div>
       </header>

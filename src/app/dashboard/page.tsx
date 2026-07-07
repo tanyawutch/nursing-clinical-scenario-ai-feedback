@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import LanguageToggle from '@/app/components/LanguageToggle'
+import LogoutButton from '@/app/components/LogoutButton'
 import prisma from '@/utils/prisma'
 import { createClient } from '@/utils/supabase/server'
 
@@ -258,6 +259,7 @@ export default async function DashboardPage({
               ID: {studentId}
             </span>
             <LanguageToggle lang={lang} pathname="/dashboard" />
+            <LogoutButton lang={lang} />
           </div>
         </div>
       </header>

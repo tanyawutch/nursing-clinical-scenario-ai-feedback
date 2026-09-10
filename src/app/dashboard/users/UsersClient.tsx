@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Fragment } from 'react'
 import { useState } from 'react'
 import {
   ArrowLeft,
@@ -14,6 +15,9 @@ import {
   X,
 } from 'lucide-react'
 import LogoutButton from '@/app/components/LogoutButton'
+import PracticeFeedbackPanel, {
+  type SubmittedAnswerSection,
+} from '@/app/components/PracticeFeedbackPanel'
 import {
   createManagedUser,
   deleteManagedUser,
@@ -34,6 +38,16 @@ export type ManagedAttemptHistory = {
   answer: string
   feedback: string
   guidance: string
+  aiScore?: string | null
+  aiStatus?: string | null
+  numericScore?: number | null
+  maxScore?: number | null
+  passScore?: number | null
+  matchedElements?: string[] | null
+  missingElements?: string[] | null
+  answerSections?: SubmittedAnswerSection[] | null
+  modelAnswer?: string | null
+  modelAnswerRevealed?: boolean | null
 }
 
 export type ManagedUser = {
@@ -119,6 +133,7 @@ export default function UsersClient({
       submittedAt: 'เวลาส่ง',
       answer: 'คำตอบ',
       feedback: 'คำแนะนำจากระบบ',
+      recommendation: 'รายละเอียดคำแนะนำจากระบบ',
       close: 'ปิด',
     },
     en: {
@@ -161,6 +176,7 @@ export default function UsersClient({
       submittedAt: 'Submitted',
       answer: 'Answer',
       feedback: 'System guidance',
+      recommendation: 'System recommendations',
       close: 'Close',
     },
   }[lang]
@@ -492,51 +508,78 @@ export default function UsersClient({
                           <th className="px-3 py-2">{copy.score}</th>
                           <th className="px-3 py-2">{copy.duration}</th>
                           <th className="px-3 py-2">{copy.answer}</th>
-                          <th className="px-3 py-2">{copy.feedback}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
                         {selectedUser.history.map((item) => (
-                          <tr key={item.id} className="align-top">
-                            <td className="px-3 py-3 text-slate-600">
-                              {formatDate(item.submittedAt, lang)}
-                            </td>
-                            <td className="px-3 py-3">
-                              <span
-                                className={`rounded-full px-2 py-1 text-[11px] font-bold ${
-                                  item.scenarioKind === 'test'
-                                    ? 'bg-blue-50 text-blue-700'
-                                    : 'bg-emerald-50 text-emerald-700'
-                                }`}
-                              >
-                                {item.scenarioKind === 'test'
-                                  ? copy.testAttempts
-                                  : copy.exerciseAttempts}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3 text-slate-700">
-                              <p className="font-bold text-slate-950">{item.scenarioTitle}</p>
-                              <p className="mt-1 text-slate-500">{item.taskTitle}</p>
-                            </td>
-                            <td className="px-3 py-3 font-black text-slate-950">
-                              {item.score}
-                            </td>
-                            <td className="px-3 py-3 text-slate-700">
-                              {item.duration}
-                            </td>
-                            <td className="max-w-[260px] px-3 py-3">
-                              <p className="max-h-32 overflow-y-auto whitespace-pre-line rounded-lg bg-slate-50 p-2 leading-5 text-slate-700">
-                                {item.answer || '-'}
-                              </p>
-                            </td>
-                            <td className="max-w-[320px] px-3 py-3">
-                              <p className="max-h-32 overflow-y-auto whitespace-pre-line rounded-lg bg-orange-50 p-2 leading-5 text-slate-800">
-                                {[item.feedback, item.guidance]
-                                  .filter(Boolean)
-                                  .join('\n\n') || '-'}
-                              </p>
-                            </td>
-                          </tr>
+                          <Fragment key={item.id}>
+                            <tr className="align-top">
+                              <td className="px-3 py-3 text-slate-600">
+                                {formatDate(item.submittedAt, lang)}
+                              </td>
+                              <td className="px-3 py-3">
+                                <span
+                                  className={`rounded-full px-2 py-1 text-[11px] font-bold ${
+                                    item.scenarioKind === 'test'
+                                      ? 'bg-blue-50 text-blue-700'
+                                      : 'bg-emerald-50 text-emerald-700'
+                                  }`}
+                                >
+                                  {item.scenarioKind === 'test'
+                                    ? copy.testAttempts
+                                    : copy.exerciseAttempts}
+                                </span>
+                              </td>
+                              <td className="px-3 py-3 text-slate-700">
+                                <p className="font-bold text-slate-950">{item.scenarioTitle}</p>
+                                <p className="mt-1 text-slate-500">{item.taskTitle}</p>
+                              </td>
+                              <td className="px-3 py-3 font-black text-slate-950">
+                                {item.score}
+                              </td>
+                              <td className="px-3 py-3 text-slate-700">
+                                {item.duration}
+                              </td>
+                              <td className="max-w-[420px] px-3 py-3">
+                                <p className="max-h-32 overflow-y-auto whitespace-pre-line rounded-lg bg-slate-50 p-2 leading-5 text-slate-700">
+                                  {item.answer || '-'}
+                                </p>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colSpan={6} className="bg-slate-50 px-3 py-4">
+                                <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-600">
+                                  {copy.recommendation}
+                                </p>
+                                <PracticeFeedbackPanel
+                                  lang={lang}
+                                  score={item.aiScore}
+                                  aiStatus={item.aiStatus}
+                                  numericScore={item.numericScore}
+                                  maxScore={item.maxScore}
+                                  passScore={item.passScore}
+                                  matchedElements={item.matchedElements}
+                                  missingElements={item.missingElements}
+                                  baseReasoning={item.feedback}
+                                  answerSections={
+                                    item.answerSections?.length
+                                      ? item.answerSections
+                                      : [
+                                          {
+                                            id: `${item.id}-answer`,
+                                            label: copy.answer,
+                                            answer: item.answer,
+                                          },
+                                        ]
+                                  }
+                                  modelAnswer={item.modelAnswer}
+                                  modelAnswerRevealed={item.modelAnswerRevealed}
+                                  remainingAttempts={0}
+                                  compact
+                                />
+                              </td>
+                            </tr>
+                          </Fragment>
                         ))}
                       </tbody>
                     </table>

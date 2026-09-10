@@ -1,4 +1,8 @@
 import { redirect } from 'next/navigation'
+import {
+  parseSubmittedSections,
+  type FeedbackFormField,
+} from '@/app/components/PracticeFeedbackPanel'
 import { isAdminEmail, normalizeEmail } from '@/utils/authUser'
 import prisma from '@/utils/prisma'
 import { createAdminClient } from '@/utils/supabase/admin'
@@ -10,6 +14,10 @@ import UsersClient, {
 } from './UsersClient'
 
 type PageLanguage = 'th' | 'en'
+
+type StepFormSchema = {
+  fields?: FeedbackFormField[]
+}
 
 function resolveLanguage(lang?: string): PageLanguage {
   return lang === 'en' ? 'en' : 'th'
@@ -63,6 +71,30 @@ function getScoreText(history: {
   return '-'
 }
 
+function isFormSchema(value: unknown): value is StepFormSchema {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const schema = value as StepFormSchema
+
+  return schema.fields === undefined || Array.isArray(schema.fields)
+}
+
+function getFields(schema: unknown) {
+  if (!isFormSchema(schema) || !schema.fields) {
+    return []
+  }
+
+  return schema.fields.filter((field): field is FeedbackFormField => {
+    return (
+      typeof field.id === 'string' &&
+      typeof field.labelTh === 'string' &&
+      typeof field.labelEn === 'string'
+    )
+  })
+}
+
 async function getStudentsWithHistory() {
   return prisma.student.findMany({
     include: {
@@ -72,6 +104,7 @@ async function getStudentsWithHistory() {
             select: {
               title: true,
               scenarioKind: true,
+              modelAnswer: true,
             },
           },
           attemptSteps: {
@@ -80,6 +113,10 @@ async function getStudentsWithHistory() {
                 select: {
                   order: true,
                   title: true,
+                  formSchema: true,
+                  maxScore: true,
+                  passScore: true,
+                  modelAnswer: true,
                 },
               },
             },
@@ -102,7 +139,7 @@ function getAttemptHistory(
   lang: PageLanguage
 ): ManagedAttemptHistory[] {
   return student.attempts
-    .flatMap((attempt) => {
+    .flatMap<ManagedAttemptHistory>((attempt) => {
       const scenarioKind: 'test' | 'exercise' =
         attempt.scenario.scenarioKind === 'test' ? 'test' : 'exercise'
       const scenarioTitle =
@@ -135,22 +172,47 @@ function getAttemptHistory(
             answer,
             feedback: attempt.aiReasoning || '',
             guidance: attempt.aiMissingElements.join('\n'),
+            aiScore: attempt.aiScore,
+            aiStatus: attempt.aiStatus,
+            numericScore: null,
+            maxScore: null,
+            passScore: null,
+            matchedElements: [],
+            missingElements: attempt.aiMissingElements ?? [],
+            answerSections: parseSubmittedSections([], answer, lang),
+            modelAnswer: attempt.scenario.modelAnswer,
+            modelAnswerRevealed: false,
           },
         ]
       }
 
-      return attempt.attemptSteps.map((step) => ({
-        id: step.id,
-        scenarioTitle,
-        scenarioKind,
-        taskTitle: `${step.scenarioStep.order}. ${step.scenarioStep.title}`,
-        score: getScoreText(step),
-        duration: formatDuration(step.createdAt, step.updatedAt, lang),
-        submittedAt: step.updatedAt.toISOString(),
-        answer: step.answer || '',
-        feedback: step.aiReasoning || '',
-        guidance: step.aiMissingElements.join('\n'),
-      }))
+      return attempt.attemptSteps.map((step) => {
+        const answer = step.answer || ''
+        const fields = getFields(step.scenarioStep?.formSchema)
+
+        return {
+          id: step.id,
+          scenarioTitle,
+          scenarioKind,
+          taskTitle: `${step.scenarioStep?.order ?? '-'}. ${step.scenarioStep?.title ?? ''}`,
+          score: getScoreText(step),
+          duration: formatDuration(step.createdAt, step.updatedAt, lang),
+          submittedAt: step.updatedAt.toISOString(),
+          answer,
+          feedback: step.aiReasoning || '',
+          guidance: step.aiMissingElements.join('\n'),
+          aiScore: step.aiScore,
+          aiStatus: step.aiStatus,
+          numericScore: step.numericScore,
+          maxScore: step.maxScore ?? step.scenarioStep?.maxScore ?? null,
+          passScore: step.scenarioStep?.passScore ?? null,
+          matchedElements: step.matchedElements ?? [],
+          missingElements: step.aiMissingElements ?? [],
+          answerSections: parseSubmittedSections(fields, answer, lang),
+          modelAnswer: step.scenarioStep?.modelAnswer ?? null,
+          modelAnswerRevealed: step.modelAnswerRevealed,
+        }
+      })
     })
     .sort(
       (first, second) =>

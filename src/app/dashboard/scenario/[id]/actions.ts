@@ -1,10 +1,12 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { getUserWithTimeout } from '@/utils/supabase/auth'
 import prisma from '@/utils/prisma'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { evaluateWithGemini } from '@/utils/aiEvaluator'
+import { getOrCreateStudentProfile, isAdminEmail } from '@/utils/authUser'
 import {
   evaluateWithRuleBasedLayer,
   type KeywordGroup,
@@ -211,35 +213,13 @@ Do not introduce medical information that is not provided here.
 async function getAuthenticatedStudent() {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUserWithTimeout(supabase)
 
   if (!user) {
     throw new Error('Unauthorized')
   }
 
-  const extractedStudentId = user.email?.split('@')[0]
-
-  if (!extractedStudentId) {
-    throw new Error('Invalid user data')
-  }
-
-  const dbStudent = await prisma.student.upsert({
-    where: {
-      studentId: extractedStudentId,
-    },
-    update: {
-      email: user.email,
-    },
-    create: {
-      studentId: extractedStudentId,
-      name: extractedStudentId,
-      email: user.email,
-    },
-  })
-
-  return dbStudent
+  return await getOrCreateStudentProfile(user)
 }
 
 export async function submitScenarioStepAnswer(formData: FormData) {
@@ -276,6 +256,10 @@ export async function submitScenarioStepAnswer(formData: FormData) {
 
   if (!scenario) {
     throw new Error('Scenario not found')
+  }
+
+  if (!scenario.isEnabled && !isAdminEmail(dbStudent.email)) {
+    throw new Error('This scenario is currently closed')
   }
 
   const scenarioStep = await prisma.scenarioStep.findFirst({
@@ -539,18 +523,10 @@ export async function resetScenarioPractice(formData: FormData) {
 export async function submitAssessment(formData: FormData) {
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUserWithTimeout(supabase)
 
   if (!user) {
     throw new Error('Unauthorized')
-  }
-
-  const extractedStudentId = user.email?.split('@')[0]
-
-  if (!extractedStudentId) {
-    throw new Error('Invalid user data')
   }
 
   const scenarioId = formData.get('scenarioId') as string | null
@@ -575,24 +551,16 @@ export async function submitAssessment(formData: FormData) {
     throw new Error('Scenario not found')
   }
 
+  const dbStudent = await getOrCreateStudentProfile(user)
+
+  if (!scenario.isEnabled && !isAdminEmail(dbStudent.email)) {
+    throw new Error('This scenario is currently closed')
+  }
+
   const requiredKeywordGroups = parseKeywordGroups(
     scenario.requiredKeywordGroups
   )
   const optionalKeywordGroups = parseKeywordGroups(scenario.optionalKeywordGroups)
-
-  const dbStudent = await prisma.student.upsert({
-    where: {
-      studentId: extractedStudentId,
-    },
-    update: {
-      email: user.email,
-    },
-    create: {
-      studentId: extractedStudentId,
-      name: extractedStudentId,
-      email: user.email,
-    },
-  })
 
   const attempt = await prisma.attempt.create({
     data: {

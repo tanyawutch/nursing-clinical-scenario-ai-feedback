@@ -23,6 +23,9 @@ model Scenario {
   title       String
   bodySystem  String
   description String
+  scenarioKind String  @default("exercise") // test, exercise
+  isEnabled    Boolean @default(true)
+  sortOrder    Int     @default(0)
 
   // Scenario-level evaluation data.
   // Kept for backward compatibility with the current Phase 1 and Phase 2 flow.

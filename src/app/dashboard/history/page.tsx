@@ -1,9 +1,11 @@
-﻿import Link from 'next/link'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import LanguageToggle from '@/app/components/LanguageToggle'
 import LogoutButton from '@/app/components/LogoutButton'
 import prisma from '@/utils/prisma'
 import { createClient } from '@/utils/supabase/server'
+import { getUserWithTimeout } from '@/utils/supabase/auth'
+import { getOrCreateStudentProfile, needsProfileSetup } from '@/utils/authUser'
 
 type PageLanguage = 'th' | 'en'
 
@@ -28,7 +30,7 @@ function getScoreLabel(score: string | null, lang: PageLanguage) {
   }
 
   if (score === 'correct') return 'ผ่านเกณฑ์'
-  if (score === 'partial') return 'ต้องปรับปรุง'
+  if (score === 'partial') return 'ควรทบทวน'
   if (score === 'incorrect') return 'ยังไม่ผ่าน'
   return 'รอตรวจ'
 }
@@ -42,20 +44,19 @@ export default async function PracticeHistoryPage({
   const lang = resolveLanguage(resolvedSearchParams.lang)
   const supabase = await createClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUserWithTimeout(supabase)
 
   if (!user) redirect(`/login?lang=${lang}`)
 
-  const studentId = user.email?.split('@')[0]
-  if (!studentId) redirect(`/login?lang=${lang}`)
+  const student = await getOrCreateStudentProfile(user)
+
+  if (needsProfileSetup(student)) {
+    redirect(`/profile/setup?lang=${lang}`)
+  }
 
   const attempts = await prisma.attempt.findMany({
     where: {
-      student: {
-        studentId,
-      },
+      studentId: student.id,
     },
     include: {
       scenario: true,
@@ -74,15 +75,15 @@ export default async function PracticeHistoryPage({
     th: {
       back: 'กลับแดชบอร์ด',
       title: 'ประวัติการซ้อม',
-      subtitle: 'ดูคะแนน คำตอบ และ feedback ของการซ้อมแต่ละครั้ง',
+      subtitle: 'ทบทวนคะแนน คำตอบ และ feedback จากการฝึกแต่ละครั้ง',
       empty: 'ยังไม่มีประวัติการซ้อม',
       attempt: 'ครั้งที่',
       totalScore: 'คะแนนรวม',
       open: 'เปิดแบบฝึก',
       submitted: 'ส่งเมื่อ',
-      answer: 'คำตอบผู้เรียน',
+      answer: 'คำตอบของผู้เรียน',
       feedback: 'feedback',
-      noAnswer: 'ยังไม่มีคำตอบ',
+      noAnswer: 'ยังไม่ได้ส่งคำตอบ',
     },
     en: {
       back: 'Back to Dashboard',
@@ -120,7 +121,7 @@ export default async function PracticeHistoryPage({
       <main className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <p className="text-sm font-bold uppercase tracking-[0.12em] text-[#F5821F]">
-            ID: {studentId}
+            ID: {student.name || student.studentId}
           </p>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
             {copy.title}

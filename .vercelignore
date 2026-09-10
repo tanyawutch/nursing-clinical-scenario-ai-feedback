@@ -1,0 +1,8 @@
+.env
+.env.*
+.next
+node_modules
+server*.log
+*.log
+web.config
+iis-proxy

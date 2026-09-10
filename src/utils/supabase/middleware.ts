@@ -1,48 +1,54 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getUserWithTimeout, hasSupabaseAuthCookie } from './auth'
+import { getSupabaseKey, getSupabaseUrl } from './env'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
+  const pathname = request.nextUrl.pathname.replace(/^\/ncs-ai-feedback(?=\/|$)/, '') || '/'
+  const isDashboardRoute = pathname.startsWith('/dashboard')
+  const isLoginRoute = pathname === '/login'
+  const hasAuthCookie = hasSupabaseAuthCookie(request.cookies.getAll())
+
+  if (!hasAuthCookie) {
+    if (isDashboardRoute) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
     }
-  )
 
-  // Get current user session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    return supabaseResponse
+  }
 
-  // Route Protection Rules
-  
-  // 1. If user is NOT logged in and tries to access /dashboard, redirect to /login
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+  const supabase = createServerClient(getSupabaseUrl(), getSupabaseKey(), {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        supabaseResponse = NextResponse.next({
+          request,
+        })
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        )
+      },
+    },
+  })
+
+  const user = await getUserWithTimeout(supabase, 5000)
+
+  if (!user && isDashboardRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // 2. If user IS logged in and tries to access /login, redirect to /dashboard
-  if (user && request.nextUrl.pathname === '/login') {
+  if (user && isLoginRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)

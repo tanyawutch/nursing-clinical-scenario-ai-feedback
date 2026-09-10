@@ -2,22 +2,24 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/utils/supabase/server'
 
+function getBasePath() {
+  return process.env.VERCEL ? '' : '/ncs-ai-feedback'
+}
+
 export async function login(formData: FormData) {
-  const studentId = formData.get('studentId') as string
+  const email = (formData.get('email') as string | null)?.trim().toLowerCase()
   const password = formData.get('password') as string
   const lang = formData.get('lang') === 'en' ? 'en' : 'th'
 
   // Check if inputs are empty
-  if (!studentId || !password) {
+  if (!email || !password) {
     return redirect(`/login?error=Missing+Credentials&lang=${lang}`)
   }
 
   const supabase = await createClient()
-
-  // Map Student ID to MFU Email format for Supabase Auth
-  const email = `${studentId}@lamduan.mfu.ac.th`
 
   // Standard Sign In with the user-provided password
   const { error } = await supabase.auth.signInWithPassword({
@@ -33,4 +35,25 @@ export async function login(formData: FormData) {
   // If successful, revalidate and go to dashboard
   revalidatePath('/', 'layout')
   redirect(`/dashboard?lang=${lang}`)
+}
+
+export async function loginWithGoogle(formData: FormData) {
+  const lang = formData.get('lang') === 'en' ? 'en' : 'th'
+  const supabase = await createClient()
+  const headerStore = await headers()
+  const origin = headerStore.get('origin') ?? ''
+  const redirectTo = `${origin}${getBasePath()}/auth/callback?next=/dashboard&lang=${lang}`
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+    },
+  })
+
+  if (error || !data.url) {
+    redirect(`/login?error=Google+Login+Failed&lang=${lang}`)
+  }
+
+  redirect(data.url)
 }

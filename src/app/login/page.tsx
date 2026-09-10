@@ -1,5 +1,5 @@
 import LanguageToggle from '@/app/components/LanguageToggle'
-import { login } from './actions'
+import { login, loginWithGoogle } from './actions'
 
 type PageLanguage = 'th' | 'en'
 
@@ -17,25 +17,27 @@ export default async function LoginPage(props: {
   const copy = {
     th: {
       school: 'สำนักวิชาพยาบาลศาสตร์',
-      system: 'ระบบฝึกสถานการณ์ทางคลินิก',
-      studentId: 'รหัสนักศึกษา',
-      studentPlaceholder: 'กรอกรหัสนักศึกษา 10 หลัก เช่น 6631501189',
+      system: 'ระบบฝึกทักษะการซักประวัติผู้ป่วยผ่านสถานการณ์จำลอง',
+      email: 'อีเมล',
+      emailPlaceholder: 'กรอกอีเมลของคุณ',
       password: 'รหัสผ่าน',
       passwordPlaceholder: 'กรอกรหัสผ่าน',
       signIn: 'เข้าสู่ระบบ',
-      invalid: 'รหัสนักศึกษาหรือรหัสผ่านไม่ถูกต้อง',
+      google: 'เข้าสู่ระบบด้วย Google',
+      invalid: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
       failed: 'เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่',
       footer: 'มหาวิทยาลัยแม่ฟ้าหลวง',
     },
     en: {
       school: 'School of Nursing',
-      system: 'Clinical Scenario Assessment System',
-      studentId: 'Student ID',
-      studentPlaceholder: 'Enter your 10-digit ID (e.g., 6631501189)',
+      system: 'Patient History Taking & Clinical Scenario Simulation Platform',
+      email: 'Email',
+      emailPlaceholder: 'Enter your email',
       password: 'Password',
       passwordPlaceholder: 'Enter your password',
       signIn: 'Sign In',
-      invalid: 'Incorrect Student ID or Password.',
+      google: 'Continue with Google',
+      invalid: 'Incorrect email or password.',
       failed: 'Login failed. Please try again.',
       footer: 'Mae Fah Luang University',
     },
@@ -80,18 +82,18 @@ export default async function LoginPage(props: {
 
           <div>
             <label
-              htmlFor="studentId"
+              htmlFor="email"
               className="block text-sm font-semibold text-gray-700"
             >
-              {copy.studentId}
+              {copy.email}
             </label>
             <div className="mt-2">
               <input
-                id="studentId"
-                name="studentId"
-                type="text"
+                id="email"
+                name="email"
+                type="email"
                 required
-                placeholder={copy.studentPlaceholder}
+                placeholder={copy.emailPlaceholder}
                 className="block w-full rounded-md border border-gray-300 px-4 py-3 text-gray-900 shadow-sm transition-all placeholder:text-gray-400 focus:border-[#C2410C] focus:outline-none focus:ring-1 focus:ring-[#C2410C] sm:text-sm"
               />
             </div>
@@ -121,6 +123,19 @@ export default async function LoginPage(props: {
             className="flex w-full justify-center rounded-md border border-transparent bg-[#C2410C] px-4 py-3 text-sm font-bold text-white shadow-md transition-colors hover:border-[#d4af37] hover:bg-[#8a1824] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]"
           >
             {copy.signIn}
+          </button>
+        </form>
+
+        <form action={loginWithGoogle}>
+          <input type="hidden" name="lang" value={lang} />
+          <button
+            type="submit"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-3 text-sm font-bold text-gray-800 shadow-sm transition-colors hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C2410C]"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full border border-gray-300 text-xs font-black text-[#C2410C]">
+              G
+            </span>
+            {copy.google}
           </button>
         </form>
 

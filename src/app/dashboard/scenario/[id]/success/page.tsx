@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/app/components/LogoutButton'
 import { createClient } from '@/utils/supabase/server'
+import { getUserWithTimeout } from '@/utils/supabase/auth'
 import prisma from '@/utils/prisma'
+import { getOrCreateStudentProfile, needsProfileSetup } from '@/utils/authUser'
 
 type SuccessPageProps = {
   searchParams: Promise<{
@@ -124,14 +126,15 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
   if (!attemptId) redirect('/dashboard')
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUserWithTimeout(supabase)
 
   if (!user) redirect('/login')
 
-  const extractedStudentId = user.email?.split('@')[0]
-  if (!extractedStudentId) redirect('/login')
+  const student = await getOrCreateStudentProfile(user)
+
+  if (needsProfileSetup(student)) {
+    redirect('/profile/setup')
+  }
 
   const attempt = await prisma.attempt.findUnique({
     where: { id: attemptId },
@@ -160,7 +163,7 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
     )
   }
 
-  if (attempt.student.studentId !== extractedStudentId) redirect('/dashboard')
+  if (attempt.studentId !== student.id) redirect('/dashboard')
 
   const result = getResultContent(attempt.aiScore)
   const feedbackSummary = getFeedbackSummary(attempt.aiReasoning, attempt.aiScore)

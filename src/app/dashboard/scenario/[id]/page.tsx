@@ -5,11 +5,40 @@ import LogoutButton from '@/app/components/LogoutButton'
 import ScenarioStepPractice from './ScenarioStepPractice'
 import prisma from '@/utils/prisma'
 import { createClient } from '@/utils/supabase/server'
+import { getUserWithTimeout } from '@/utils/supabase/auth'
+import {
+  getOrCreateStudentProfile,
+  isAdminEmail,
+  needsProfileSetup,
+} from '@/utils/authUser'
 
 type PageLanguage = 'th' | 'en'
 
 function resolveLanguage(lang?: string): PageLanguage {
   return lang === 'en' ? 'en' : 'th'
+}
+
+function getScenarioKindFromId(scenarioId: string) {
+  return scenarioId.includes('test') ? 'test' : 'exercise'
+}
+
+function getScenarioDisplayTitle(scenarioId: string, lang: PageLanguage) {
+  const kind = getScenarioKindFromId(scenarioId)
+
+  if (kind === 'test') {
+    return lang === 'th' ? 'สถานการณ์ทดสอบ' : 'Test Scenario'
+  }
+
+  return lang === 'th' ? 'สถานการณ์จำลอง' : 'Practice Scenario'
+}
+
+function formatPatientDescription(description: string) {
+  return description
+    .replace(/\s*ข้อมูลทั่วไป \(General information\):\s*/g, '\n\nข้อมูลทั่วไป (General information): ')
+    .replace(/\s*ประวัติการเจ็บป่วยในอดีต \(Past History\)\s*/g, '\n\nประวัติการเจ็บป่วยในอดีต (Past History)\n')
+    .replace(/\s*พฤติกรรมสุขภาพ \(Health behavior\)\s*/g, '\n\nพฤติกรรมสุขภาพ (Health behavior)\n')
+    .replace(/\s*อาการสำคัญที่นำผู้ป่วยมาโรงพยาบาล/g, '\n\nอาการสำคัญที่นำผู้ป่วยมาโรงพยาบาล')
+    .trim()
 }
 
 export default async function AssessmentPage({
@@ -25,12 +54,16 @@ export default async function AssessmentPage({
   const lang = resolveLanguage(resolvedSearchParams.lang)
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getUserWithTimeout(supabase)
 
   if (!user) {
     redirect('/login')
+  }
+
+  const student = await getOrCreateStudentProfile(user)
+
+  if (needsProfileSetup(student)) {
+    redirect(`/profile/setup?lang=${lang}`)
   }
 
   const scenario = await prisma.scenario.findUnique({
@@ -48,6 +81,10 @@ export default async function AssessmentPage({
 
   if (!scenario) {
     notFound()
+  }
+
+  if (!scenario.isEnabled && !isAdminEmail(user.email)) {
+    redirect(`/dashboard?lang=${lang}`)
   }
 
   const firstStep = scenario.steps[0] ?? null
@@ -125,11 +162,6 @@ export default async function AssessmentPage({
       scenarioLabel: 'สถานการณ์ผู้ป่วย',
       bodySystemFallback: 'กรณีศึกษา',
       patientProfile: 'ข้อมูลผู้ป่วย',
-      supportTitle: 'แนวทางการประเมิน',
-      support:
-        'ระบบตรวจคำตอบตาม rubric จากเอกสาร โดยให้คะแนนตาม keyword และแนวคิดสำคัญของแต่ละงาน นักศึกษามีโอกาสทดลอง 2 ครั้งต่อข้อ',
-      modeTitle: 'รูปแบบการเรียนรู้',
-      mode: 'ฝึกทีละงานตามเอกสาร V2 Scenario Back pain',
       workflowLabel: 'ลำดับงานตามเอกสาร',
       workflowTitle: 'ทำแบบฝึกตาม rubric ทั้ง 5 งาน',
       workflowBody:
@@ -145,11 +177,6 @@ export default async function AssessmentPage({
       scenarioLabel: 'Clinical Scenario',
       bodySystemFallback: 'Clinical Case',
       patientProfile: 'Patient Profile',
-      supportTitle: 'Evaluation Support',
-      support:
-        'The system evaluates answers against the document rubric using required clinical concepts. Students have 2 attempts per task.',
-      modeTitle: 'Learning mode',
-      mode: 'Step-by-step practice based on V2 Scenario Back pain',
       workflowLabel: 'Document workflow',
       workflowTitle: 'Complete all 5 rubric tasks',
       workflowBody:
@@ -160,6 +187,8 @@ export default async function AssessmentPage({
       active: 'Current task',
     },
   }[lang]
+  const scenarioDisplayTitle = getScenarioDisplayTitle(scenario.id, lang)
+  const patientDescription = formatPatientDescription(scenario.description)
 
   return (
     <div className="min-h-screen bg-slate-100 pb-12 font-sans text-slate-950">
@@ -203,7 +232,7 @@ export default async function AssessmentPage({
                 </p>
 
                 <h1 className="mt-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                  {lang === 'th' ? scenario.title : 'Acute Lower Back Pain'}
+                  {scenarioDisplayTitle}
                 </h1>
               </div>
 
@@ -213,7 +242,7 @@ export default async function AssessmentPage({
             </div>
           </div>
 
-          <div className="grid gap-0 lg:grid-cols-[1.65fr_1fr]">
+          <div>
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
                 <div className="flex items-start gap-4">
@@ -226,32 +255,13 @@ export default async function AssessmentPage({
                       {copy.patientProfile}
                     </h2>
 
-                    <p className="mt-3 text-base leading-8 text-slate-800">
-                      {scenario.description}
+                    <p className="mt-3 whitespace-pre-line text-base leading-8 text-slate-800">
+                      {patientDescription}
                     </p>
                   </div>
                 </div>
               </div>
             </div>
-
-            <aside className="border-t border-slate-200 bg-slate-50 p-6 sm:p-8 lg:border-l lg:border-t-0 lg:p-10">
-              <h2 className="text-base font-bold uppercase tracking-[0.08em] text-slate-950">
-                {copy.supportTitle}
-              </h2>
-
-              <p className="mt-3 text-base leading-8 text-slate-800">
-                {copy.support}
-              </p>
-
-              <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-                <p className="text-base font-bold text-slate-950">
-                  {copy.modeTitle}
-                </p>
-                <p className="mt-2 text-base leading-7 font-medium text-slate-700">
-                  {copy.mode}
-                </p>
-              </div>
-            </aside>
           </div>
         </section>
 

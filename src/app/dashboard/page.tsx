@@ -78,8 +78,8 @@ const systems: SystemMeta[] = [
 function buildScenarioDescription(kind: 'test' | 'exercise', lang: PageLanguage) {
   if (kind === 'test') {
     return lang === 'th'
-      ? 'สถานการณ์สำหรับวัดผลตาม rubric 5 งานหลัก'
-      : 'Assessment station based on five core rubric tasks.'
+      ? 'กำลังเริ่มทำการทดสอบด้วยสถานการณ์จำลอง'
+      : 'You are about to begin a simulation-based test.'
   }
 
   return lang === 'th'

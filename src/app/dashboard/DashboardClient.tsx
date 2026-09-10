@@ -103,7 +103,9 @@ export default function DashboardClient({
       lockTooltip: 'บทเรียนนี้ยังไม่เปิดให้เข้าทำ โปรดรอผู้สอนเปิดระบบ',
       timeLimit: 'ระยะเวลา',
       totalPoints: 'คะแนนเต็ม',
-      rubricNotice: 'ประเมินผลตามเกณฑ์ Rubric 5 งานหลัก',
+      testNotice:
+        'คุณสามารถทดสอบได้เพียงครั้งเดียว โปรดระมัดระวังในคำตอบของคุณ',
+      practiceNotice: 'คุณสามารถทดสอบได้เพียง 2 ครั้ง',
       confirmStart: 'ยืนยันเริ่มทำบทเรียน',
       closeModal: 'ปิดหน้าต่าง',
       noLimit: 'ไม่จำกัดเวลา',
@@ -133,7 +135,9 @@ export default function DashboardClient({
       lockTooltip: 'This station is locked by instructor.',
       timeLimit: 'Time Limit',
       totalPoints: 'Max Score',
-      rubricNotice: 'Evaluated against 5 core clinical rubric tasks',
+      testNotice:
+        'You can take this test only once. Please review your answers carefully.',
+      practiceNotice: 'You can try this practice up to 2 times.',
       confirmStart: 'Begin Station',
       closeModal: 'Close',
       noLimit: 'No limit',
@@ -620,9 +624,25 @@ export default function DashboardClient({
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-[11px] text-slate-600">
-              <FileText className="h-4 w-4 shrink-0 text-blue-600" />
-              <span>{copy.rubricNotice}</span>
+            <div
+              className={`mt-3 flex items-center gap-2 rounded-xl border px-3 py-2 text-[11px] font-bold ${
+                selectedScenario.kind === 'test'
+                  ? 'border-red-200 bg-red-50 text-red-700'
+                  : 'border-orange-200 bg-orange-50 text-[#F5821F]'
+              }`}
+            >
+              <FileText
+                className={`h-4 w-4 shrink-0 ${
+                  selectedScenario.kind === 'test'
+                    ? 'text-red-600'
+                    : 'text-[#F5821F]'
+                }`}
+              />
+              <span>
+                {selectedScenario.kind === 'test'
+                  ? copy.testNotice
+                  : copy.practiceNotice}
+              </span>
             </div>
 
             <div className="mt-6 flex items-center gap-3">

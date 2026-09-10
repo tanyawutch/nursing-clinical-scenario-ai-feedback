@@ -6,6 +6,7 @@ import {
   Pencil,
   Plus,
   ShieldCheck,
+  RotateCcw,
   Trash2,
   UserRound,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ import { createClient } from '@/utils/supabase/server'
 import {
   createManagedUser,
   deleteManagedUser,
+  resetManagedUserAttempts,
   updateManagedUser,
 } from './actions'
 
@@ -31,6 +33,8 @@ type ManagedUser = {
   name: string
   studentId: string
   attemptsCount: number
+  testAttemptsCount: number
+  exerciseAttemptsCount: number
   authCreatedAt: string
   lastSignInAt: string
   hasAuthAccount: boolean
@@ -87,6 +91,8 @@ export default async function UsersPage({
       auth: 'บัญชีล็อกอิน',
       noAuth: 'ยังไม่มีบัญชีล็อกอิน',
       attempts: 'ประวัติการซ้อม',
+      testAttempts: 'แบบทดสอบ',
+      exerciseAttempts: 'แบบฝึกหัด',
       created: 'สร้างบัญชีเมื่อ',
       lastLogin: 'เข้าสู่ระบบล่าสุด',
       edit: 'แก้ไขข้อมูล',
@@ -95,10 +101,16 @@ export default async function UsersPage({
       save: 'บันทึก',
       delete: 'ลบผู้ใช้งาน',
       deleteConfirm: 'ยืนยันการลบผู้ใช้งานนี้และประวัติทั้งหมด',
+      reset: 'รีเซ็ตจำนวนครั้ง',
+      resetTest: 'รีเซ็ตแบบทดสอบ',
+      resetExercise: 'รีเซ็ตแบบฝึกหัด',
+      resetAll: 'รีเซ็ตทั้งหมด',
+      resetConfirm: 'ยืนยันการรีเซ็ตจำนวนครั้งของผู้ใช้งานนี้',
       noUsers: 'ยังไม่มีผู้ใช้งานในระบบ',
       statusCreated: 'เพิ่มผู้ใช้งานเรียบร้อยแล้ว',
       statusUpdated: 'บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้ว',
       statusDeleted: 'ลบผู้ใช้งานเรียบร้อยแล้ว',
+      statusReset: 'รีเซ็ตจำนวนครั้งของผู้ใช้งานเรียบร้อยแล้ว',
     },
     en: {
       title: 'User Management',
@@ -115,6 +127,8 @@ export default async function UsersPage({
       auth: 'Login account',
       noAuth: 'No login account',
       attempts: 'Practice history',
+      testAttempts: 'Tests',
+      exerciseAttempts: 'Practices',
       created: 'Created',
       lastLogin: 'Last login',
       edit: 'Edit user',
@@ -123,19 +137,29 @@ export default async function UsersPage({
       save: 'Save changes',
       delete: 'Delete user',
       deleteConfirm: 'Confirm deleting this user and all history',
+      reset: 'Reset attempts',
+      resetTest: 'Reset tests',
+      resetExercise: 'Reset practices',
+      resetAll: 'Reset all',
+      resetConfirm: 'Confirm resetting this user’s attempts',
       noUsers: 'No users yet.',
       statusCreated: 'User created.',
       statusUpdated: 'User updated.',
       statusDeleted: 'User deleted.',
+      statusReset: 'User attempts reset.',
     },
   }[lang]
 
   const [students, authUsersResult] = await Promise.all([
     prisma.student.findMany({
       include: {
-        _count: {
+        attempts: {
           select: {
-            attempts: true,
+            scenario: {
+              select: {
+                scenarioKind: true,
+              },
+            },
           },
         },
       },
@@ -171,6 +195,14 @@ export default async function UsersPage({
     .map((email) => {
       const authUser = usersByEmail.get(email)
       const student = studentsByEmail.get(email)
+      const testAttemptsCount =
+        student?.attempts.filter(
+          (attempt) => attempt.scenario.scenarioKind === 'test'
+        ).length ?? 0
+      const exerciseAttemptsCount =
+        student?.attempts.filter(
+          (attempt) => attempt.scenario.scenarioKind !== 'test'
+        ).length ?? 0
       const metadataName =
         typeof authUser?.user_metadata?.display_name === 'string'
           ? authUser.user_metadata.display_name
@@ -183,7 +215,9 @@ export default async function UsersPage({
         email,
         name: student?.name || metadataName || '',
         studentId: student?.studentId || email.split('@')[0] || '',
-        attemptsCount: student?._count.attempts ?? 0,
+        attemptsCount: testAttemptsCount + exerciseAttemptsCount,
+        testAttemptsCount,
+        exerciseAttemptsCount,
         authCreatedAt: authUser?.created_at ?? '',
         lastSignInAt: authUser?.last_sign_in_at ?? '',
         hasAuthAccount: Boolean(authUser),
@@ -198,7 +232,9 @@ export default async function UsersPage({
         ? copy.statusUpdated
         : resolvedSearchParams.status === 'deleted'
           ? copy.statusDeleted
-          : ''
+          : resolvedSearchParams.status === 'reset'
+            ? copy.statusReset
+            : ''
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 lg:px-8">
@@ -299,20 +335,37 @@ export default async function UsersPage({
               {copy.noUsers}
             </p>
           ) : (
-            <div className="grid gap-3">
-              {managedUsers.map((managedUser) => (
-                <article
-                  key={managedUser.key}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
-                >
-                  <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-black">
-                          {managedUser.name || managedUser.studentId || '-'}
-                        </h3>
+            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+              <table className="min-w-[1080px] w-full border-collapse bg-white text-left text-sm">
+                <thead className="bg-slate-100 text-xs font-black uppercase tracking-wide text-slate-600">
+                  <tr>
+                    <th className="px-4 py-3">{copy.name}</th>
+                    <th className="px-4 py-3">{copy.email}</th>
+                    <th className="px-4 py-3">{copy.studentId}</th>
+                    <th className="px-4 py-3">{copy.auth}</th>
+                    <th className="px-4 py-3">{copy.attempts}</th>
+                    <th className="px-4 py-3">{copy.lastLogin}</th>
+                    <th className="px-4 py-3 text-right">{copy.edit}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {managedUsers.map((managedUser) => (
+                    <tr key={managedUser.key} className="align-top">
+                      <td className="px-4 py-4 font-black text-slate-950">
+                        {managedUser.name || '-'}
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Mail className="h-3.5 w-3.5 text-slate-400" />
+                          {managedUser.email || '-'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-slate-700">
+                        {managedUser.studentId || '-'}
+                      </td>
+                      <td className="px-4 py-4">
                         <span
-                          className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${
                             managedUser.hasAuthAccount
                               ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                               : 'border-amber-200 bg-amber-50 text-amber-700'
@@ -320,144 +373,187 @@ export default async function UsersPage({
                         >
                           {managedUser.hasAuthAccount ? copy.auth : copy.noAuth}
                         </span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
-                        <span className="inline-flex items-center gap-1">
-                          <Mail className="h-3.5 w-3.5" />
-                          {managedUser.email || '-'}
-                        </span>
-                        <span>
-                          {copy.studentId}: {managedUser.studentId || '-'}
-                        </span>
-                        <span>
-                          {copy.attempts}: {managedUser.attemptsCount}
-                        </span>
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
-                        <span>
-                          {copy.created}: {formatDate(managedUser.authCreatedAt, lang)}
-                        </span>
-                        <span>
-                          {copy.lastLogin}: {formatDate(managedUser.lastSignInAt, lang)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <details className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-                    <summary className="cursor-pointer text-sm font-black text-[#F5821F]">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Pencil className="h-3.5 w-3.5" />
-                        {copy.edit}
-                      </span>
-                    </summary>
-
-                    <div className="mt-4 grid gap-4">
-                      <form
-                        action={updateManagedUser}
-                        className="grid gap-3 md:grid-cols-2"
-                      >
-                        <input type="hidden" name="lang" value={lang} />
-                        <input
-                          type="hidden"
-                          name="authUserId"
-                          value={managedUser.authUserId}
-                        />
-                        <input
-                          type="hidden"
-                          name="studentDbId"
-                          value={managedUser.studentDbId}
-                        />
-                        <input
-                          type="hidden"
-                          name="originalEmail"
-                          value={managedUser.email}
-                        />
-                        <label className="text-xs font-bold text-slate-600">
-                          {copy.email}
-                          <input
-                            required
-                            type="email"
-                            name="email"
-                            defaultValue={managedUser.email}
-                            className={`mt-1 ${fieldClass()}`}
-                          />
-                        </label>
-                        <label className="text-xs font-bold text-slate-600">
-                          {copy.newPassword}
-                          <input
-                            minLength={6}
-                            type="password"
-                            name="password"
-                            placeholder={copy.blankPassword}
-                            className={`mt-1 ${fieldClass()}`}
-                          />
-                        </label>
-                        <label className="text-xs font-bold text-slate-600">
-                          {copy.name}
-                          <input
-                            required
-                            type="text"
-                            name="name"
-                            defaultValue={managedUser.name}
-                            className={`mt-1 ${fieldClass()}`}
-                          />
-                        </label>
-                        <label className="text-xs font-bold text-slate-600">
-                          {copy.studentId}
-                          <input
-                            type="text"
-                            name="studentId"
-                            defaultValue={managedUser.studentId}
-                            className={`mt-1 ${fieldClass()}`}
-                          />
-                        </label>
-                        <div className="md:col-span-2">
-                          <button
-                            type="submit"
-                            className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-700"
-                          >
-                            {copy.save}
-                          </button>
+                      </td>
+                      <td className="px-4 py-4 text-xs text-slate-700">
+                        <div className="font-black text-slate-950">
+                          {managedUser.attemptsCount}
                         </div>
-                      </form>
+                        <div className="mt-1 space-y-0.5">
+                          <p>
+                            {copy.testAttempts}: {managedUser.testAttemptsCount}
+                          </p>
+                          <p>
+                            {copy.exerciseAttempts}: {managedUser.exerciseAttemptsCount}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-xs text-slate-600">
+                        {formatDate(managedUser.lastSignInAt, lang)}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-end">
+                          <details className="group">
+                            <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-black text-[#F5821F] transition hover:bg-orange-100">
+                              <Pencil className="h-3.5 w-3.5" />
+                              {copy.edit}
+                            </summary>
+                            <div className="mt-2 w-[520px] max-w-[70vw] rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
+                              <form
+                                action={updateManagedUser}
+                                className="grid gap-3 md:grid-cols-2"
+                              >
+                                <input type="hidden" name="lang" value={lang} />
+                                <input
+                                  type="hidden"
+                                  name="authUserId"
+                                  value={managedUser.authUserId}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="studentDbId"
+                                  value={managedUser.studentDbId}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="originalEmail"
+                                  value={managedUser.email}
+                                />
+                                <label className="text-xs font-bold text-slate-600">
+                                  {copy.email}
+                                  <input
+                                    required
+                                    type="email"
+                                    name="email"
+                                    defaultValue={managedUser.email}
+                                    className={`mt-1 ${fieldClass()}`}
+                                  />
+                                </label>
+                                <label className="text-xs font-bold text-slate-600">
+                                  {copy.newPassword}
+                                  <input
+                                    minLength={6}
+                                    type="password"
+                                    name="password"
+                                    placeholder={copy.blankPassword}
+                                    className={`mt-1 ${fieldClass()}`}
+                                  />
+                                </label>
+                                <label className="text-xs font-bold text-slate-600">
+                                  {copy.name}
+                                  <input
+                                    required
+                                    type="text"
+                                    name="name"
+                                    defaultValue={managedUser.name}
+                                    className={`mt-1 ${fieldClass()}`}
+                                  />
+                                </label>
+                                <label className="text-xs font-bold text-slate-600">
+                                  {copy.studentId}
+                                  <input
+                                    type="text"
+                                    name="studentId"
+                                    defaultValue={managedUser.studentId}
+                                    className={`mt-1 ${fieldClass()}`}
+                                  />
+                                </label>
+                                <div className="md:col-span-2">
+                                  <button
+                                    type="submit"
+                                    className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-700"
+                                  >
+                                    {copy.save}
+                                  </button>
+                                </div>
+                              </form>
 
-                      <form
-                        action={deleteManagedUser}
-                        className="rounded-xl border border-red-200 bg-red-50 p-3"
-                      >
-                        <input type="hidden" name="lang" value={lang} />
-                        <input
-                          type="hidden"
-                          name="authUserId"
-                          value={managedUser.authUserId}
-                        />
-                        <input
-                          type="hidden"
-                          name="studentDbId"
-                          value={managedUser.studentDbId}
-                        />
-                        <input
-                          type="hidden"
-                          name="email"
-                          value={managedUser.email}
-                        />
-                        <label className="flex items-start gap-2 text-xs font-bold text-red-700">
-                          <input required type="checkbox" className="mt-0.5" />
-                          <span>{copy.deleteConfirm}</span>
-                        </label>
-                        <button
-                          type="submit"
-                          className="mt-3 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white transition hover:bg-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {copy.delete}
-                        </button>
-                      </form>
-                    </div>
-                  </details>
-                </article>
-              ))}
+                              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                <div className="rounded-xl border border-blue-200 bg-blue-50 p-3">
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {[
+                                      ['test', copy.resetTest],
+                                      ['exercise', copy.resetExercise],
+                                      ['all', copy.resetAll],
+                                    ].map(([scope, label]) => (
+                                      <form
+                                        key={scope}
+                                        action={resetManagedUserAttempts}
+                                        className="rounded-lg border border-blue-200 bg-white p-2"
+                                      >
+                                        <input type="hidden" name="lang" value={lang} />
+                                        <input
+                                          type="hidden"
+                                          name="studentDbId"
+                                          value={managedUser.studentDbId}
+                                        />
+                                        <input
+                                          type="hidden"
+                                          name="scope"
+                                          value={scope}
+                                        />
+                                        <label className="mb-2 flex items-start gap-1.5 text-[11px] font-bold text-blue-800">
+                                          <input
+                                            required
+                                            type="checkbox"
+                                            className="mt-0.5"
+                                            disabled={!managedUser.studentDbId}
+                                          />
+                                          <span>{copy.resetConfirm}</span>
+                                        </label>
+                                        <button
+                                          type="submit"
+                                          disabled={!managedUser.studentDbId}
+                                          className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          <RotateCcw className="h-3.5 w-3.5" />
+                                          {label}
+                                        </button>
+                                      </form>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <form
+                                  action={deleteManagedUser}
+                                  className="rounded-xl border border-red-200 bg-red-50 p-3"
+                                >
+                                  <input type="hidden" name="lang" value={lang} />
+                                  <input
+                                    type="hidden"
+                                    name="authUserId"
+                                    value={managedUser.authUserId}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="studentDbId"
+                                    value={managedUser.studentDbId}
+                                  />
+                                  <input
+                                    type="hidden"
+                                    name="email"
+                                    value={managedUser.email}
+                                  />
+                                  <label className="flex items-start gap-2 text-xs font-bold text-red-700">
+                                    <input required type="checkbox" className="mt-0.5" />
+                                    <span>{copy.deleteConfirm}</span>
+                                  </label>
+                                  <button
+                                    type="submit"
+                                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-black text-white transition hover:bg-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    {copy.delete}
+                                  </button>
+                                </form>
+                              </div>
+                            </div>
+                          </details>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>

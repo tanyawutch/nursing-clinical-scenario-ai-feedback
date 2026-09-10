@@ -2,10 +2,9 @@
 
 import Image from 'next/image'
 import { useMemo, useState, useTransition } from 'react'
-import { resetScenarioPractice, submitScenarioStepAnswer } from './actions'
+import { submitScenarioStepAnswer } from './actions'
 
 const MAX_STEP_ANSWER_LENGTH = 4000
-const MAX_STEP_ATTEMPTS = 2
 const BACK_PAIN_SCENARIO_ID = 'back-pain-scenario-001'
 const BACK_PAIN_IMAGE_PATH = '/scenarios/back-pain/back-pain-clinical-scene.png'
 
@@ -55,6 +54,7 @@ type ScenarioStepPracticeResult = {
 type ScenarioStepPracticeProps = {
   lang: PageLanguage
   scenarioId: string
+  maxStepAttempts: number
   step: ScenarioStepPracticeStep | null
   latestAttemptStep: ScenarioStepPracticeResult
 }
@@ -306,11 +306,11 @@ function buildCombinedAnswer(
 export default function ScenarioStepPractice({
   lang,
   scenarioId,
+  maxStepAttempts,
   step,
   latestAttemptStep,
 }: ScenarioStepPracticeProps) {
   const [isPending, startTransition] = useTransition()
-  const [isResetPending, startResetTransition] = useTransition()
   const fields = useMemo(() => getFields(step?.formSchema), [step?.formSchema])
   const [answers, setAnswers] = useState<Record<string, string>>(() => {
     if (fields.length === 0) {
@@ -327,8 +327,7 @@ export default function ScenarioStepPractice({
       attempt: 'ครั้งที่',
       noAttempts: 'ยังไม่ได้ส่งคำตอบ',
       finalAttempt: 'ส่งได้อีกครั้งสุดท้าย',
-      restart: 'เริ่มทำใหม่',
-      restarting: 'กำลังเริ่มใหม่...',
+      finalOnlyAttempt: 'ส่งได้ครั้งเดียว',
       answer: 'คำตอบของนักศึกษา',
       answerHelp:
         'กรอกคำตอบเป็นภาษาไทยเป็นหลัก สามารถใช้คำศัพท์อังกฤษทางคลินิกได้',
@@ -355,8 +354,7 @@ export default function ScenarioStepPractice({
       attempt: 'Attempt',
       noAttempts: 'No attempts yet',
       finalAttempt: 'Final attempt next',
-      restart: 'Restart practice',
-      restarting: 'Restarting...',
+      finalOnlyAttempt: 'Single attempt only',
       answer: 'Student response',
       answerHelp:
         'Thai is the primary language, but clinical English terms are supported.',
@@ -390,13 +388,12 @@ export default function ScenarioStepPractice({
   }
 
   const usedAttempts = latestAttemptStep?.attemptCount ?? 0
-  const remainingAttempts = Math.max(MAX_STEP_ATTEMPTS - usedAttempts, 0)
+  const remainingAttempts = Math.max(maxStepAttempts - usedAttempts, 0)
   const isLocked = latestAttemptStep?.isLocked ?? false
   const isFinalAttemptNext = remainingAttempts === 1 && !isLocked
   const combinedAnswer = buildCombinedAnswer(fields, answers, lang)
   const isSubmitDisabled =
     isPending ||
-    isResetPending ||
     isLocked ||
     combinedAnswer.trim().length === 0 ||
     combinedAnswer.length > MAX_STEP_ANSWER_LENGTH
@@ -462,7 +459,7 @@ export default function ScenarioStepPractice({
           <div className="flex w-fit flex-col gap-2 lg:items-end">
             <div className="rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-bold text-blue-900 shadow-sm">
               {usedAttempts > 0
-                ? `${copy.attempt} ${usedAttempts}/${MAX_STEP_ATTEMPTS}`
+                ? `${copy.attempt} ${usedAttempts}/${maxStepAttempts}`
                 : copy.noAttempts}
             </div>
 
@@ -472,29 +469,10 @@ export default function ScenarioStepPractice({
 
             {isFinalAttemptNext ? (
               <div className="rounded-full border border-red-200 bg-red-50 px-4 py-1.5 text-sm font-bold text-red-900 shadow-sm">
-                {copy.finalAttempt}
+                {maxStepAttempts === 1 ? copy.finalOnlyAttempt : copy.finalAttempt}
               </div>
             ) : null}
 
-            {latestAttemptStep ? (
-              <form
-                action={(formData) => {
-                  startResetTransition(() => {
-                    resetScenarioPractice(formData)
-                  })
-                }}
-              >
-                <input type="hidden" name="scenarioId" value={scenarioId} />
-                <input type="hidden" name="lang" value={lang} />
-                <button
-                  type="submit"
-                  disabled={isPending || isResetPending}
-                  className="mt-1 inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 transition hover:border-[#F5821F]/50 hover:bg-slate-50 hover:text-[#F5821F] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isResetPending ? copy.restarting : copy.restart}
-                </button>
-              </form>
-            ) : null}
           </div>
         </div>
       </div>
@@ -567,7 +545,7 @@ export default function ScenarioStepPractice({
                       onChange={(event) => {
                         updateAnswer(field.id, event.target.value)
                       }}
-                      disabled={isLocked || isPending || isResetPending}
+                      disabled={isLocked || isPending}
                       rows={field.rows ?? 4}
                       className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#F5821F] focus:ring-4 focus:ring-[#F5821F]/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-700"
                       placeholder={
@@ -584,7 +562,7 @@ export default function ScenarioStepPractice({
                   onChange={(event) => {
                     updateAnswer('freeText', event.target.value)
                   }}
-                  disabled={isLocked || isPending || isResetPending}
+                  disabled={isLocked || isPending}
                   rows={8}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base leading-7 text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-[#F5821F] focus:ring-4 focus:ring-[#F5821F]/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-700"
                   placeholder={copy.freePlaceholder}

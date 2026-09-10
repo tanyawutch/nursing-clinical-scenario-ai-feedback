@@ -236,3 +236,56 @@ export async function deleteManagedUser(formData: FormData) {
   revalidatePath('/dashboard/users')
   redirect(getRedirectPath(lang, 'deleted'))
 }
+
+export async function resetManagedUserAttempts(formData: FormData) {
+  const lang = getLang(formData)
+  await requireAdmin(lang)
+
+  const studentDbId = String(formData.get('studentDbId') ?? '').trim()
+  const scope = String(formData.get('scope') ?? 'all')
+
+  if (!studentDbId) {
+    throw new Error('Student profile is missing')
+  }
+
+  const attempts = await prisma.attempt.findMany({
+    where: {
+      studentId: studentDbId,
+      ...(scope === 'test' || scope === 'exercise'
+        ? {
+            scenario: {
+              scenarioKind: scope,
+            },
+          }
+        : {}),
+    },
+    select: {
+      id: true,
+    },
+  })
+
+  const attemptIds = attempts.map((attempt) => attempt.id)
+
+  if (attemptIds.length > 0) {
+    await prisma.$transaction([
+      prisma.attemptStep.deleteMany({
+        where: {
+          attemptId: {
+            in: attemptIds,
+          },
+        },
+      }),
+      prisma.attempt.deleteMany({
+        where: {
+          id: {
+            in: attemptIds,
+          },
+        },
+      }),
+    ])
+  }
+
+  revalidatePath('/dashboard/users')
+  revalidatePath('/dashboard/history')
+  redirect(getRedirectPath(lang, 'reset'))
+}

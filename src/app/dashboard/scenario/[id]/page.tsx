@@ -32,6 +32,14 @@ function getScenarioDisplayTitle(scenarioId: string, lang: PageLanguage) {
   return lang === 'th' ? 'สถานการณ์จำลอง' : 'Practice Scenario'
 }
 
+function getMaxStepAttempts(scenario: { id: string; scenarioKind: string }) {
+  if (scenario.scenarioKind === 'test' || scenario.id.includes('test')) {
+    return 1
+  }
+
+  return 2
+}
+
 function formatPatientDescription(description: string) {
   return description
     .replace(/\s*ข้อมูลทั่วไป \(General information\):\s*/g, '\n\nข้อมูลทั่วไป (General information): ')
@@ -189,6 +197,7 @@ export default async function AssessmentPage({
   }[lang]
   const scenarioDisplayTitle = getScenarioDisplayTitle(scenario.id, lang)
   const patientDescription = formatPatientDescription(scenario.description)
+  const maxStepAttempts = getMaxStepAttempts(scenario)
 
   return (
     <div className="min-h-screen bg-slate-100 pb-12 font-sans text-slate-950">
@@ -342,6 +351,7 @@ export default async function AssessmentPage({
           }-${latestAttemptStep?.isLocked ?? false}-${lang}`}
           lang={lang}
           scenarioId={scenario.id}
+          maxStepAttempts={maxStepAttempts}
           step={
             targetStep
               ? {

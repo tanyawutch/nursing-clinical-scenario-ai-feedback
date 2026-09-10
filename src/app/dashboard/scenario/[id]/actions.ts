@@ -12,8 +12,17 @@ import {
   type KeywordGroup,
 } from '@/utils/ruleBasedEvaluator'
 
-const MAX_STEP_ATTEMPTS = 2
+const TEST_STEP_ATTEMPTS = 1
+const EXERCISE_STEP_ATTEMPTS = 2
 const MAX_STEP_ANSWER_LENGTH = 4000
+
+function getMaxStepAttempts(scenario: { id: string; scenarioKind: string }) {
+  if (scenario.scenarioKind === 'test' || scenario.id.includes('test')) {
+    return TEST_STEP_ATTEMPTS
+  }
+
+  return EXERCISE_STEP_ATTEMPTS
+}
 
 function parseKeywordGroups(value: unknown): KeywordGroup[] | null {
   if (!Array.isArray(value)) {
@@ -262,6 +271,8 @@ export async function submitScenarioStepAnswer(formData: FormData) {
     throw new Error('This scenario is currently closed')
   }
 
+  const maxStepAttempts = getMaxStepAttempts(scenario)
+
   const scenarioStep = await prisma.scenarioStep.findFirst({
     where: {
       id: scenarioStepId,
@@ -315,7 +326,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
 
   const currentAttemptCount = existingAttemptStep?.attemptCount ?? 0
 
-  if (currentAttemptCount >= MAX_STEP_ATTEMPTS) {
+  if (currentAttemptCount >= maxStepAttempts) {
     await prisma.attemptStep.upsert({
       where: {
         attemptId_scenarioStepId: {
@@ -331,7 +342,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
         attemptId: attempt.id,
         scenarioStepId: scenarioStep.id,
         answer: cleanAnswer,
-        attemptCount: MAX_STEP_ATTEMPTS,
+        attemptCount: maxStepAttempts,
         isLocked: true,
         modelAnswerRevealed: true,
         aiStatus: 'completed',
@@ -401,8 +412,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
     }
 
     const isCorrect = finalScore === 'correct'
-    const shouldRevealModelAnswer =
-      !isCorrect && nextAttemptCount >= MAX_STEP_ATTEMPTS
+    const shouldRevealModelAnswer = nextAttemptCount >= maxStepAttempts
     const shouldLockStep = isCorrect || shouldRevealModelAnswer
 
     await prisma.attemptStep.upsert({
@@ -555,6 +565,19 @@ export async function submitAssessment(formData: FormData) {
 
   if (!scenario.isEnabled && !isAdminEmail(dbStudent.email)) {
     throw new Error('This scenario is currently closed')
+  }
+
+  const maxScenarioAttempts = getMaxStepAttempts(scenario)
+  const completedAttempts = await prisma.attempt.count({
+    where: {
+      studentId: dbStudent.id,
+      scenarioId: scenario.id,
+      isCompleted: true,
+    },
+  })
+
+  if (completedAttempts >= maxScenarioAttempts) {
+    throw new Error('ครบจำนวนครั้งที่อนุญาตแล้ว')
   }
 
   const requiredKeywordGroups = parseKeywordGroups(

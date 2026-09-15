@@ -23,8 +23,6 @@ type FormField = {
 }
 
 type StepFormSchema = {
-  instructionTh?: string
-  instructionEn?: string
   fields?: FormField[]
 }
 
@@ -86,16 +84,6 @@ function getFields(schema: unknown) {
       typeof field.placeholderEn === 'string'
     )
   })
-}
-
-function getInstruction(schema: unknown, lang: PageLanguage) {
-  if (!isFormSchema(schema)) {
-    return ''
-  }
-
-  return lang === 'th'
-    ? schema.instructionTh || ''
-    : schema.instructionEn || schema.instructionTh || ''
 }
 
 function LoadingSpinner() {
@@ -168,7 +156,7 @@ export default function ScenarioStepPractice({
       passScore: 'เกณฑ์ผ่าน',
       clinicalScene: 'ภาพประกอบสถานการณ์',
       clinicalSceneText:
-        'ใช้ข้อมูลผู้ป่วยและภาพประกอบนี้เป็นบริบทในการตอบตาม rubric',
+        'ลักษณะทั่วไปของผู้ป่วย: เพศหญิง อายุ 55 ปี การแต่งกาย สวมเสื้อยืดกางเกงสแล็ค แต่งกายสะอาด รูปร่างท้วม สีหน้าเรียบเฉย นั่งอยู่ในห้องตรวจ',
       freePlaceholder: 'พิมพ์คำตอบของคุณที่นี่',
     },
     en: {
@@ -249,15 +237,6 @@ export default function ScenarioStepPractice({
               {step.title}
             </h2>
 
-            <p className="mt-3 max-w-4xl text-base leading-7 text-slate-800">
-              {step.prompt}
-            </p>
-
-            {getInstruction(step.formSchema, lang) ? (
-              <p className="mt-3 max-w-4xl rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold leading-6 text-blue-950">
-                {getInstruction(step.formSchema, lang)}
-              </p>
-            ) : null}
           </div>
 
           <div className="flex w-fit flex-col gap-2 lg:items-end">

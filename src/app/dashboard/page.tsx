@@ -29,21 +29,9 @@ function resolveLanguage(lang?: string): PageLanguage {
 
 const systems: SystemMeta[] = [
   {
-    key: 'fever',
-    bodySystem: 'อาการไข้และโรคติดเชื้อ',
-    number: 1,
-    nameTh: 'อาการไข้และโรคติดเชื้อ',
-    nameEn: 'Fever & Infectious Illness',
-    subtitleTh:
-      'การซักประวัติ ประเมินสัญญาณชีพ และวินิจฉัยแยกโรคติดเชื้อ',
-    subtitleEn: 'Fever history, vital signs, and differential diagnosis',
-    testId: 'fever-test-001',
-    exerciseId: 'fever-exercise-001',
-  },
-  {
     key: 'respiratory',
     bodySystem: 'ระบบทางเดินหายใจ',
-    number: 2,
+    number: 1,
     nameTh: 'ระบบทางเดินหายใจ',
     nameEn: 'Respiratory System',
     subtitleTh: 'การประเมินอาการไอ หอบเหนื่อย และการวางแผนดูแล',
@@ -54,7 +42,7 @@ const systems: SystemMeta[] = [
   {
     key: 'musculoskeletal',
     bodySystem: 'ระบบกระดูกและกล้ามเนื้อ',
-    number: 3,
+    number: 2,
     nameTh: 'ระบบกระดูกและกล้ามเนื้อ',
     nameEn: 'Musculoskeletal System',
     subtitleTh: 'การประเมินอาการปวด การคัดกรองสัญญาณเตือน และการพยาบาล',
@@ -65,13 +53,25 @@ const systems: SystemMeta[] = [
   {
     key: 'urinary',
     bodySystem: 'ระบบทางเดินปัสสาวะ',
-    number: 4,
+    number: 3,
     nameTh: 'ระบบทางเดินปัสสาวะ',
     nameEn: 'Urinary System',
     subtitleTh: 'การประเมินอาการทางปัสสาวะ การส่งตรวจ และคำแนะนำผู้ป่วย',
     subtitleEn: 'Urinary symptoms, investigation, and patient counseling',
     testId: 'urinary-test-001',
     exerciseId: 'urinary-exercise-001',
+  },
+  {
+    key: 'fever',
+    bodySystem: 'อาการไข้และโรคติดเชื้อ',
+    number: 4,
+    nameTh: 'อาการไข้และโรคติดเชื้อ',
+    nameEn: 'Fever & Infectious Illness',
+    subtitleTh:
+      'การซักประวัติ ประเมินสัญญาณชีพ และวินิจฉัยแยกโรคติดเชื้อ',
+    subtitleEn: 'Fever history, vital signs, and differential diagnosis',
+    testId: 'fever-test-001',
+    exerciseId: 'fever-exercise-001',
   },
 ]
 

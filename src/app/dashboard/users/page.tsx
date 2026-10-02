@@ -23,8 +23,15 @@ function resolveLanguage(lang?: string): PageLanguage {
   return lang === 'en' ? 'en' : 'th'
 }
 
-function formatDuration(start: Date, end: Date, lang: PageLanguage) {
-  const seconds = Math.max(Math.round((end.getTime() - start.getTime()) / 1000), 0)
+function formatDurationSeconds(
+  durationSeconds: number | null | undefined,
+  lang: PageLanguage
+) {
+  if (durationSeconds === null || durationSeconds === undefined) {
+    return '-'
+  }
+
+  const seconds = Math.max(durationSeconds, 0)
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
 
@@ -142,6 +149,17 @@ function getAttemptHistory(
     .flatMap<ManagedAttemptHistory>((attempt) => {
       const scenarioKind: 'test' | 'exercise' =
         attempt.scenario.scenarioKind === 'test' ? 'test' : 'exercise'
+      const attemptDurationSeconds =
+        attempt.durationSeconds ??
+        (attempt.completedAt
+          ? Math.max(
+              Math.round(
+                (attempt.completedAt.getTime() - attempt.startedAt.getTime()) /
+                  1000
+              ),
+              0
+            )
+          : null)
       const scenarioTitle =
         scenarioKind === 'test'
           ? lang === 'th'
@@ -167,7 +185,7 @@ function getAttemptHistory(
               maxScore: null,
               aiScore: attempt.aiScore,
             }),
-            duration: '-',
+            duration: formatDurationSeconds(attemptDurationSeconds, lang),
             submittedAt: attempt.createdAt.toISOString(),
             answer,
             feedback: attempt.aiReasoning || '',
@@ -196,7 +214,7 @@ function getAttemptHistory(
           scenarioKind,
           taskTitle: `${step.scenarioStep?.order ?? '-'}. ${step.scenarioStep?.title ?? ''}`,
           score: getScoreText(step),
-          duration: formatDuration(step.createdAt, step.updatedAt, lang),
+          duration: formatDurationSeconds(attemptDurationSeconds, lang),
           submittedAt: step.updatedAt.toISOString(),
           answer,
           feedback: step.aiReasoning || '',

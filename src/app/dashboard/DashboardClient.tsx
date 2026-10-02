@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import LanguageToggle from '@/app/components/LanguageToggle'
 import LogoutButton from '@/app/components/LogoutButton'
-import { toggleScenarioAvailability } from './actions'
+import { startScenarioAttempt, toggleScenarioAvailability } from './actions'
 
 type PageLanguage = 'th' | 'en'
 type ScenarioKind = 'test' | 'exercise'
@@ -63,10 +63,6 @@ const systemIcons = {
 
 function getSystemIcon(systemKey: string) {
   return systemIcons[systemKey as keyof typeof systemIcons] ?? BookOpen
-}
-
-function getScenarioRoute(id: string, lang: PageLanguage) {
-  return `/dashboard/scenario/${id}?lang=${lang}`
 }
 
 export default function DashboardClient({
@@ -646,17 +642,24 @@ export default function DashboardClient({
             </div>
 
             <div className="mt-6 flex items-center gap-3">
-              <Link
-                href={getScenarioRoute(selectedScenario.id, lang)}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black text-white shadow-md transition active:scale-[0.98] ${
-                  selectedScenario.kind === 'test'
-                    ? 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-700'
-                    : 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
-                }`}
+              <form
+                action={startScenarioAttempt}
+                className="flex flex-1"
               >
-                <Play className="h-4 w-4 fill-white" />
-                <span>{copy.confirmStart}</span>
-              </Link>
+                <input type="hidden" name="scenarioId" value={selectedScenario.id} />
+                <input type="hidden" name="lang" value={lang} />
+                <button
+                  type="submit"
+                  className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black text-white shadow-md transition active:scale-[0.98] ${
+                    selectedScenario.kind === 'test'
+                      ? 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-700'
+                      : 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
+                  }`}
+                >
+                  <Play className="h-4 w-4 fill-white" />
+                  <span>{copy.confirmStart}</span>
+                </button>
+              </form>
 
               <button
                 type="button"

@@ -15,6 +15,7 @@ import {
 const TEST_STEP_ATTEMPTS = 1
 const EXERCISE_STEP_ATTEMPTS = 2
 const MAX_STEP_ANSWER_LENGTH = 4000
+const TEST_TIME_LIMIT_SECONDS = 30 * 60
 
 function getMaxStepAttempts(scenario: { id: string; scenarioKind: string }) {
   if (scenario.scenarioKind === 'test' || scenario.id.includes('test')) {
@@ -22,6 +23,17 @@ function getMaxStepAttempts(scenario: { id: string; scenarioKind: string }) {
   }
 
   return EXERCISE_STEP_ATTEMPTS
+}
+
+function getScenarioTimeLimitSeconds(scenario: {
+  id: string
+  scenarioKind: string
+}) {
+  if (scenario.scenarioKind === 'test' || scenario.id.includes('test')) {
+    return TEST_TIME_LIMIT_SECONDS
+  }
+
+  return null
 }
 
 function parseKeywordGroups(value: unknown): KeywordGroup[] | null {
@@ -231,6 +243,79 @@ async function getAuthenticatedStudent() {
   return await getOrCreateStudentProfile(user)
 }
 
+async function completeAttemptIfAllStepsFinished({
+  attemptId,
+  scenario,
+}: {
+  attemptId: string
+  scenario: { id: string; scenarioKind: string }
+}) {
+  const [attempt, totalSteps, completedSteps] = await Promise.all([
+    prisma.attempt.findUnique({
+      where: {
+        id: attemptId,
+      },
+      select: {
+        startedAt: true,
+        isCompleted: true,
+        timeLimitSeconds: true,
+      },
+    }),
+    prisma.scenarioStep.count({
+      where: {
+        scenarioId: scenario.id,
+      },
+    }),
+    prisma.attemptStep.count({
+      where: {
+        attemptId,
+        scenarioStep: {
+          scenarioId: scenario.id,
+        },
+        isLocked: true,
+        modelAnswerRevealed: true,
+      },
+    }),
+  ])
+
+  if (!attempt || attempt.isCompleted || totalSteps === 0) {
+    return
+  }
+
+  if (completedSteps < totalSteps) {
+    return
+  }
+
+  const completedAt = new Date()
+  const durationSeconds = Math.max(
+    Math.round((completedAt.getTime() - attempt.startedAt.getTime()) / 1000),
+    0
+  )
+  const timeLimitSeconds =
+    attempt.timeLimitSeconds ?? getScenarioTimeLimitSeconds(scenario)
+  const completedWithinTimeLimit =
+    timeLimitSeconds === null ? null : durationSeconds <= timeLimitSeconds
+  const failedByTimeLimit = completedWithinTimeLimit === false
+
+  await prisma.attempt.update({
+    where: {
+      id: attemptId,
+    },
+    data: {
+      isCompleted: true,
+      completedAt,
+      durationSeconds,
+      timeLimitSeconds,
+      completedWithinTimeLimit,
+      aiStatus: 'completed',
+      aiScore: failedByTimeLimit ? 'incorrect' : 'correct',
+      aiReasoning: failedByTimeLimit
+        ? 'ทำแบบทดสอบเกินเวลา 30 นาที จึงยังไม่ผ่านเงื่อนไขเวลา'
+        : 'ทำครบทุกข้อภายในเงื่อนไขเวลาที่กำหนด',
+    },
+  })
+}
+
 export async function submitScenarioStepAnswer(formData: FormData) {
   const scenarioId = formData.get('scenarioId') as string | null
   const scenarioStepId = formData.get('scenarioStepId') as string | null
@@ -272,6 +357,17 @@ export async function submitScenarioStepAnswer(formData: FormData) {
   }
 
   const maxStepAttempts = getMaxStepAttempts(scenario)
+  const completedAttempts = await prisma.attempt.count({
+    where: {
+      studentId: dbStudent.id,
+      scenarioId: scenario.id,
+      isCompleted: true,
+    },
+  })
+
+  if (completedAttempts >= maxStepAttempts) {
+    throw new Error('ครบจำนวนครั้งที่อนุญาตแล้ว')
+  }
 
   const scenarioStep = await prisma.scenarioStep.findFirst({
     where: {
@@ -305,6 +401,8 @@ export async function submitScenarioStepAnswer(formData: FormData) {
         isCompleted: false,
         aiStatus: 'pending',
         aiReasoning: 'Step-by-step practice in progress.',
+        startedAt: new Date(),
+        timeLimitSeconds: getScenarioTimeLimitSeconds(scenario),
       },
     })
   }
@@ -355,6 +453,11 @@ export async function submitScenarioStepAnswer(formData: FormData) {
         matchedElements: [],
         evaluationDetails: {},
       },
+    })
+
+    await completeAttemptIfAllStepsFinished({
+      attemptId: attempt.id,
+      scenario,
     })
 
     redirect(
@@ -452,6 +555,11 @@ export async function submitScenarioStepAnswer(formData: FormData) {
         isLocked: shouldLockStep,
         modelAnswerRevealed: shouldRevealModelAnswer,
       },
+    })
+
+    await completeAttemptIfAllStepsFinished({
+      attemptId: attempt.id,
+      scenario,
     })
   } catch {
     await prisma.attemptStep.upsert({
@@ -592,6 +700,11 @@ export async function submitAssessment(formData: FormData) {
       primaryDiagnosis: primaryDiagnosis.trim(),
       interventions: interventions.trim(),
       isCompleted: true,
+      startedAt: new Date(),
+      completedAt: new Date(),
+      durationSeconds: 0,
+      timeLimitSeconds: getScenarioTimeLimitSeconds(scenario),
+      completedWithinTimeLimit: true,
       aiStatus: 'pending',
     },
   })

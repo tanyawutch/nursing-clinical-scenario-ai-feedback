@@ -19,10 +19,10 @@ model Student {
 
 // Clinical Scenarios
 model Scenario {
-  id          String @id @default(uuid())
-  title       String
-  bodySystem  String
-  description String
+  id           String  @id @default(uuid())
+  title        String
+  bodySystem   String
+  description  String
   scenarioKind String  @default("exercise") // test, exercise
   isEnabled    Boolean @default(true)
   sortOrder    Int     @default(0)
@@ -66,8 +66,8 @@ model ScenarioStep {
   optionalKeywordGroups Json?
 
   // Rubric scoring and structured input metadata.
-  maxScore   Int  @default(0)
-  passScore  Int  @default(0)
+  maxScore   Int   @default(0)
+  passScore  Int   @default(0)
   formSchema Json?
 
   attemptSteps AttemptStep[]
@@ -94,10 +94,15 @@ model Attempt {
   aiMissingElements String[] @default([])
   aiStatus          String   @default("pending") // pending, completed, failed
 
-  preTestScore  Int?
-  postTestScore Int?
-  isCompleted   Boolean  @default(false)
-  createdAt     DateTime @default(now())
+  preTestScore             Int?
+  postTestScore            Int?
+  isCompleted              Boolean   @default(false)
+  startedAt                DateTime  @default(now())
+  completedAt              DateTime?
+  durationSeconds          Int?
+  timeLimitSeconds         Int?
+  completedWithinTimeLimit Boolean?
+  createdAt                DateTime  @default(now())
 
   attemptSteps AttemptStep[]
 

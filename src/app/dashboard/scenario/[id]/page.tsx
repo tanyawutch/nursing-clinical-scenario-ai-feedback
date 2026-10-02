@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import LanguageToggle from '@/app/components/LanguageToggle'
 import LogoutButton from '@/app/components/LogoutButton'
+import AttemptTimer from './AttemptTimer'
 import ScenarioStepPractice from './ScenarioStepPractice'
 import prisma from '@/utils/prisma'
 import { createClient } from '@/utils/supabase/server'
@@ -13,6 +14,8 @@ import {
 } from '@/utils/authUser'
 
 type PageLanguage = 'th' | 'en'
+
+const TEST_TIME_LIMIT_SECONDS = 30 * 60
 
 function resolveLanguage(lang?: string): PageLanguage {
   return lang === 'en' ? 'en' : 'th'
@@ -38,6 +41,26 @@ function getMaxStepAttempts(scenario: { id: string; scenarioKind: string }) {
   }
 
   return 2
+}
+
+function isTestScenario(scenario: { id: string; scenarioKind: string }) {
+  return scenario.scenarioKind === 'test' || scenario.id.includes('test')
+}
+
+function formatDuration(totalSeconds: number | null, lang: PageLanguage) {
+  if (totalSeconds === null) return '-'
+
+  const seconds = Math.max(totalSeconds, 0)
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+
+  if (minutes === 0) {
+    return lang === 'th' ? `${remainingSeconds} วินาที` : `${remainingSeconds}s`
+  }
+
+  return lang === 'th'
+    ? `${minutes} นาที ${remainingSeconds} วินาที`
+    : `${minutes}m ${remainingSeconds}s`
 }
 
 function formatPatientDescription(description: string) {
@@ -142,21 +165,31 @@ export default async function AssessmentPage({
     firstStep
 
   const activeAttempt = await prisma.attempt.findFirst({
-    where: {
-      ...(resolvedSearchParams.attemptId
-        ? { id: resolvedSearchParams.attemptId }
-        : {}),
-      scenarioId: scenario.id,
-      isCompleted: false,
-      student: {
-        email: user.email,
-      },
-    },
+    where: resolvedSearchParams.attemptId
+      ? {
+          id: resolvedSearchParams.attemptId,
+          scenarioId: scenario.id,
+          student: {
+            email: user.email,
+          },
+        }
+      : {
+          scenarioId: scenario.id,
+          isCompleted: false,
+          student: {
+            email: user.email,
+          },
+        },
     orderBy: {
-      createdAt: 'desc',
+      startedAt: 'desc',
     },
     select: {
       id: true,
+      startedAt: true,
+      completedAt: true,
+      durationSeconds: true,
+      timeLimitSeconds: true,
+      completedWithinTimeLimit: true,
       attemptSteps: {
         select: {
           scenarioStepId: true,
@@ -208,6 +241,10 @@ export default async function AssessmentPage({
       start: 'ทำข้อนี้',
       active: 'กำลังทำ',
       caseSummary: 'สรุปกรณีศึกษา',
+      timeResult: 'ผลเวลา',
+      timePassed: 'ผ่านเงื่อนไขเวลา',
+      timeFailed: 'เกินเวลา 30 นาที จึงยังไม่ผ่านเงื่อนไขเวลา',
+      duration: 'เวลาที่ใช้',
     },
     en: {
       back: 'Back to Dashboard',
@@ -224,12 +261,31 @@ export default async function AssessmentPage({
       start: 'Start task',
       active: 'Current task',
       caseSummary: 'Case summary',
+      timeResult: 'Time result',
+      timePassed: 'Within time limit',
+      timeFailed: 'Over 30 minutes, so the time requirement is not passed',
+      duration: 'Duration',
     },
   }[lang]
   const scenarioDisplayTitle = getScenarioDisplayTitle(scenario.id, lang)
   const patientDescription = formatPatientDescription(scenario.description)
   const patientGeneralAppearance = extractGeneralAppearance(scenario.description)
   const maxStepAttempts = getMaxStepAttempts(scenario)
+  const shouldShowTestTimer = isTestScenario(scenario) && Boolean(activeAttempt)
+  const nextStepId = targetStep
+    ? scenario.steps.find((step) => step.order === targetStep.order + 1)?.id ?? null
+    : null
+  const totalMaxScore = scenario.steps.reduce(
+    (total, step) => total + step.maxScore,
+    0
+  )
+  const totalEarnedScore = scenario.steps.reduce((total, step) => {
+    const attemptStep = activeAttempt?.attemptSteps.find(
+      (item) => item.scenarioStepId === step.id
+    )
+
+    return total + (attemptStep?.numericScore ?? 0)
+  }, 0)
 
   return (
     <div className="min-h-screen bg-slate-100 pb-12 font-sans text-slate-950">
@@ -243,9 +299,19 @@ export default async function AssessmentPage({
             {copy.back}
           </Link>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-3 sm:flex">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#F5821F]" />
+            <div className="flex items-center gap-3">
+              {shouldShowTestTimer ? (
+                <AttemptTimer
+                  lang={lang}
+                  startedAt={activeAttempt?.startedAt.toISOString() ?? null}
+                  completedAt={activeAttempt?.completedAt?.toISOString() ?? null}
+                  timeLimitSeconds={
+                    activeAttempt?.timeLimitSeconds ?? TEST_TIME_LIMIT_SECONDS
+                  }
+                />
+              ) : null}
+              <div className="hidden items-center gap-3 sm:flex">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#F5821F]" />
               <span className="text-sm font-semibold text-slate-800">
                 {copy.assessment}
               </span>
@@ -397,16 +463,54 @@ export default async function AssessmentPage({
               : null
           }
           latestAttemptStep={latestAttemptStep}
+          attemptId={activeAttempt?.id}
+          nextStepId={nextStepId}
+          isScenarioComplete={allStepsCompleted}
         />
 
-        {allStepsCompleted && scenario.modelAnswer ? (
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
-            <h2 className="text-xl font-bold text-slate-950">
-              {copy.caseSummary}
-            </h2>
-            <p className="mt-3 whitespace-pre-line text-base leading-8 text-slate-800">
-              {scenario.modelAnswer}
-            </p>
+        {allStepsCompleted ? (
+          <section id="final-summary" className="space-y-6">
+            <div className="rounded-2xl border border-[#F5821F]/30 bg-[#FFF8F1] p-6 shadow-sm sm:p-8 lg:p-10">
+              <h2 className="text-xl font-bold text-slate-950">
+                {lang === 'th' ? 'สรุปผลการทำสถานการณ์' : 'Scenario result summary'}
+              </h2>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <span className="rounded-full border border-[#F5821F]/30 bg-white px-4 py-2 text-base font-bold text-[#C45D0C]">
+                  {lang === 'th' ? 'คะแนนรวม' : 'Total score'}: {totalEarnedScore}/{totalMaxScore}
+                </span>
+                <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
+                  {lang === 'th' ? 'ทำครบ 5 ข้อแล้ว' : 'All 5 tasks completed'}
+                </span>
+              </div>
+              {isTestScenario(scenario) &&
+              activeAttempt?.durationSeconds !== null &&
+              activeAttempt?.durationSeconds !== undefined ? (
+                <div
+                  className={`mt-4 rounded-2xl border px-4 py-3 text-sm font-bold ${
+                    activeAttempt.completedWithinTimeLimit
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'border-red-200 bg-red-50 text-red-700'
+                  }`}
+                >
+                  {copy.timeResult}: {copy.duration}{' '}
+                  {formatDuration(activeAttempt.durationSeconds, lang)} ·{' '}
+                  {activeAttempt.completedWithinTimeLimit
+                    ? copy.timePassed
+                    : copy.timeFailed}
+                </div>
+              ) : null}
+            </div>
+
+            {scenario.modelAnswer ? (
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+                <h2 className="text-xl font-bold text-slate-950">
+                  {copy.caseSummary}
+                </h2>
+                <p className="mt-3 whitespace-pre-line text-base leading-8 text-slate-800">
+                  {scenario.modelAnswer}
+                </p>
+              </section>
+            ) : null}
           </section>
         ) : null}
       </main>

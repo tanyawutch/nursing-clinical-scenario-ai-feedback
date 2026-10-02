@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useMemo, useState, useTransition } from 'react'
 import PracticeFeedbackPanel, {
   parseSubmittedSections,
@@ -115,6 +116,9 @@ type ScenarioStepPracticeProps = {
   maxStepAttempts: number
   step: ScenarioStepPracticeStep | null
   latestAttemptStep: ScenarioStepPracticeResult
+  attemptId?: string | null
+  nextStepId?: string | null
+  isScenarioComplete?: boolean
 }
 
 function isFormSchema(value: unknown): value is StepFormSchema {
@@ -204,6 +208,9 @@ export default function ScenarioStepPractice({
   maxStepAttempts,
   step,
   latestAttemptStep,
+  attemptId,
+  nextStepId,
+  isScenarioComplete = false,
 }: ScenarioStepPracticeProps) {
   const [isPending, startTransition] = useTransition()
   const [selectedFindings, setSelectedFindings] = useState<string[]>([])
@@ -245,6 +252,8 @@ export default function ScenarioStepPractice({
       passScore: 'เกณฑ์ผ่าน',
       clinicalScene: 'ภาพประกอบสถานการณ์',
       freePlaceholder: 'พิมพ์คำตอบของคุณที่นี่',
+      nextStep: 'ทำข้อถัดไป',
+      viewSummary: 'ดูสรุปผลทั้งหมด',
     },
     en: {
       noStep: 'Step-by-step practice is not configured for this scenario.',
@@ -270,6 +279,8 @@ export default function ScenarioStepPractice({
       passScore: 'Pass score',
       clinicalScene: 'Clinical scene',
       freePlaceholder: 'Type your answer here',
+      nextStep: 'Next task',
+      viewSummary: 'View final summary',
     },
   }[lang]
 
@@ -539,6 +550,26 @@ export default function ScenarioStepPractice({
                     )
                   })}
                 </div>
+              </div>
+            ) : null}
+
+            {isLocked && attemptId && (nextStepId || isScenarioComplete) ? (
+              <div className="mt-6 flex justify-end border-t border-slate-200 pt-5">
+                {nextStepId ? (
+                  <Link
+                    href={`/dashboard/scenario/${scenarioId}?attemptId=${attemptId}&stepId=${nextStepId}&lang=${lang}`}
+                    className="inline-flex items-center justify-center rounded-xl bg-[#F5821F] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#D96F14]"
+                  >
+                    {copy.nextStep} <span className="ml-2" aria-hidden="true">→</span>
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/dashboard/scenario/${scenarioId}?attemptId=${attemptId}&stepId=${step.id}&lang=${lang}#final-summary`}
+                    className="inline-flex items-center justify-center rounded-xl bg-[#F5821F] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#D96F14]"
+                  >
+                    {copy.viewSummary} <span className="ml-2" aria-hidden="true">→</span>
+                  </Link>
+                )}
               </div>
             ) : null}
           </div>

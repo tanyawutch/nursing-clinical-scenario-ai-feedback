@@ -553,7 +553,7 @@ export default function ScenarioStepPractice({
               </div>
             ) : null}
 
-            {isLocked && attemptId && (nextStepId || isScenarioComplete) ? (
+            {latestAttemptStep && attemptId && (nextStepId || (isLocked && isScenarioComplete)) ? (
               <div className="mt-6 flex justify-end border-t border-slate-200 pt-5">
                 {nextStepId ? (
                   <Link

@@ -8,8 +8,98 @@ import PracticeFeedbackPanel, {
 import { submitScenarioStepAnswer } from './actions'
 
 const MAX_STEP_ANSWER_LENGTH = 4000
-const BACK_PAIN_SCENARIO_ID = 'back-pain-scenario-001'
-const BACK_PAIN_IMAGE_PATH = '/scenarios/back-pain/back-pain-clinical-scene.png'
+
+type ScenarioScene = {
+  imagePath: string
+  titleTh: string
+  titleEn: string
+  descriptionTh: string
+  descriptionEn: string
+  alt: string
+}
+
+const scenarioScenes: Record<string, ScenarioScene> = {
+  'fever-test-001': {
+    imagePath: '/scenarios/clinical-scenes/fever-test.png',
+    titleTh: 'ภาพประกอบสถานการณ์อาการไข้และโรคติดเชื้อ',
+    titleEn: 'Fever and infectious illness clinical scene',
+    descriptionTh:
+      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินลักษณะทั่วไปและอาการของผู้ป่วย',
+    descriptionEn:
+      'Use this illustration as additional context for the patient’s general appearance and symptoms.',
+    alt: 'Fever test clinical scenario',
+  },
+  'fever-exercise-001': {
+    imagePath: '/scenarios/clinical-scenes/fever-exercise.jpg',
+    titleTh: 'ภาพประกอบสถานการณ์อาการไข้และโรคติดเชื้อ',
+    titleEn: 'Fever and infectious illness practice scene',
+    descriptionTh:
+      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินลักษณะทั่วไปและอาการของผู้ป่วย',
+    descriptionEn:
+      'Use this illustration as additional context for the patient’s general appearance and symptoms.',
+    alt: 'Fever practice clinical scenario',
+  },
+  'respiratory-test-001': {
+    imagePath: '/scenarios/clinical-scenes/respiratory-test.png',
+    titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินหายใจ',
+    titleEn: 'Respiratory test clinical scene',
+    descriptionTh:
+      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินหายใจของผู้ป่วย',
+    descriptionEn:
+      'Use this illustration as additional context for the patient’s respiratory symptoms.',
+    alt: 'Respiratory test clinical scenario',
+  },
+  'respiratory-exercise-001': {
+    imagePath: '/scenarios/clinical-scenes/respiratory-exercise.png',
+    titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินหายใจ',
+    titleEn: 'Respiratory practice clinical scene',
+    descriptionTh:
+      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินหายใจของผู้ป่วย',
+    descriptionEn:
+      'Use this illustration as additional context for the patient’s respiratory symptoms.',
+    alt: 'Respiratory practice clinical scenario',
+  },
+  'urinary-test-001': {
+    imagePath: '/scenarios/clinical-scenes/urinary-test.png',
+    titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินปัสสาวะ',
+    titleEn: 'Urinary test clinical scene',
+    descriptionTh:
+      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินปัสสาวะของผู้ป่วย',
+    descriptionEn:
+      'Use this illustration as additional context for the patient’s urinary symptoms.',
+    alt: 'Urinary test clinical scenario',
+  },
+  'urinary-exercise-001': {
+    imagePath: '/scenarios/clinical-scenes/urinary-exercise.png',
+    titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินปัสสาวะ',
+    titleEn: 'Urinary practice clinical scene',
+    descriptionTh:
+      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินปัสสาวะของผู้ป่วย',
+    descriptionEn:
+      'Use this illustration as additional context for the patient’s urinary symptoms.',
+    alt: 'Urinary practice clinical scenario',
+  },
+  'musculoskeletal-test-001': {
+    imagePath: '/scenarios/clinical-scenes/musculoskeletal-test.png',
+    titleTh: 'ภาพประกอบสถานการณ์ระบบกระดูกและกล้ามเนื้อ',
+    titleEn: 'Musculoskeletal test clinical scene',
+    descriptionTh:
+      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบกระดูกและกล้ามเนื้อของผู้ป่วย',
+    descriptionEn:
+      'Use this illustration as additional context for the patient’s musculoskeletal symptoms.',
+    alt: 'Musculoskeletal test clinical scenario',
+  },
+  'back-pain-scenario-001': {
+    imagePath: '/scenarios/back-pain/back-pain-clinical-scene.png',
+    titleTh: 'ผู้ป่วยหญิงอายุ 55 ปี มีอาการปวดหลังใน OPD',
+    titleEn: '55-year-old female patient with back pain in OPD',
+    descriptionTh:
+      'ลักษณะทั่วไปของผู้ป่วย: เพศหญิง อายุ 55 ปี การแต่งกาย สวมเสื้อยืดกางเกงสแล็ค แต่งกายสะอาด รูปร่างท้วม สีหน้าเรียบเฉย นั่งอยู่ในห้องตรวจ',
+    descriptionEn:
+      'Use this patient information and scene as context for the rubric task.',
+    alt: 'Back pain practice clinical scenario',
+  },
+}
 
 type PageLanguage = 'th' | 'en'
 
@@ -155,8 +245,6 @@ export default function ScenarioStepPractice({
       score: 'คะแนน',
       passScore: 'เกณฑ์ผ่าน',
       clinicalScene: 'ภาพประกอบสถานการณ์',
-      clinicalSceneText:
-        'ลักษณะทั่วไปของผู้ป่วย: เพศหญิง อายุ 55 ปี การแต่งกาย สวมเสื้อยืดกางเกงสแล็ค แต่งกายสะอาด รูปร่างท้วม สีหน้าเรียบเฉย นั่งอยู่ในห้องตรวจ',
       freePlaceholder: 'พิมพ์คำตอบของคุณที่นี่',
     },
     en: {
@@ -182,8 +270,6 @@ export default function ScenarioStepPractice({
       score: 'Score',
       passScore: 'Pass score',
       clinicalScene: 'Clinical scene',
-      clinicalSceneText:
-        'Use this patient information and scene as context for the rubric task.',
       freePlaceholder: 'Type your answer here',
     },
   }[lang]
@@ -215,6 +301,7 @@ export default function ScenarioStepPractice({
     latestAttemptStep?.answer ?? null,
     lang
   )
+  const scenarioScene = scenarioScenes[scenarioId]
 
   function updateAnswer(fieldId: string, value: string) {
     setAnswers((current) => ({
@@ -261,13 +348,13 @@ export default function ScenarioStepPractice({
       </div>
 
       <div className="p-6 sm:p-8">
-        {scenarioId === BACK_PAIN_SCENARIO_ID ? (
+        {scenarioScene ? (
           <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
               <div className="flex min-h-[280px] items-end justify-center bg-slate-100 px-6 pt-8">
                 <Image
-                  src={BACK_PAIN_IMAGE_PATH}
-                  alt="Back pain clinical scenario"
+                  src={scenarioScene.imagePath}
+                  alt={scenarioScene.alt}
                   width={520}
                   height={340}
                   className="max-h-[340px] w-full max-w-[520px] object-contain"
@@ -281,13 +368,13 @@ export default function ScenarioStepPractice({
                 </p>
 
                 <h3 className="mt-3 text-xl font-bold leading-7 text-slate-950">
-                  {lang === 'th'
-                    ? 'ผู้ป่วยหญิงอายุ 55 ปี มีอาการปวดหลังใน OPD'
-                    : '55-year-old female patient with back pain in OPD'}
+                  {lang === 'th' ? scenarioScene.titleTh : scenarioScene.titleEn}
                 </h3>
 
                 <p className="mt-3 text-base leading-7 text-slate-800">
-                  {copy.clinicalSceneText}
+                  {lang === 'th'
+                    ? scenarioScene.descriptionTh
+                    : scenarioScene.descriptionEn}
                 </p>
               </div>
             </div>

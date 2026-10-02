@@ -24,9 +24,9 @@ const scenarioScenes: Record<string, ScenarioScene> = {
     titleTh: 'ภาพประกอบสถานการณ์อาการไข้และโรคติดเชื้อ',
     titleEn: 'Fever and infectious illness clinical scene',
     descriptionTh:
-      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินลักษณะทั่วไปและอาการของผู้ป่วย',
+      'ลักษณะทั่วไปของผู้ป่วย: เพศชาย วัยกลางคน สวมเสื้อยืดสีเทา กางเกงขายาวสีเข้ม นั่งอยู่บนเก้าอี้ สีหน้าอ่อนเพลีย เหงื่อออก และถือกระดาษทิชชูอยู่ในมือ',
     descriptionEn:
-      'Use this illustration as additional context for the patient’s general appearance and symptoms.',
+      'General appearance: Middle-aged male wearing a gray T-shirt and dark long pants, seated on a chair, appearing fatigued and sweaty, holding a tissue in his hand.',
     alt: 'Fever test clinical scenario',
   },
   'fever-exercise-001': {
@@ -34,9 +34,9 @@ const scenarioScenes: Record<string, ScenarioScene> = {
     titleTh: 'ภาพประกอบสถานการณ์อาการไข้และโรคติดเชื้อ',
     titleEn: 'Fever and infectious illness practice scene',
     descriptionTh:
-      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินลักษณะทั่วไปและอาการของผู้ป่วย',
+      'ลักษณะทั่วไปของผู้ป่วย: เพศหญิง วัยกลางคน สวมเสื้อยืดสีเขียวอ่อน กางเกงขายาวสีเทา แต่งกายเรียบร้อย นั่งอยู่บนเก้าอี้ไม้ สีหน้าเรียบเฉย และวางมือประสานกันบนตัก',
     descriptionEn:
-      'Use this illustration as additional context for the patient’s general appearance and symptoms.',
+      'General appearance: Middle-aged female wearing a light green T-shirt and gray long pants, neatly dressed, seated on a wooden chair with a calm facial expression and hands folded on her lap.',
     alt: 'Fever practice clinical scenario',
   },
   'respiratory-test-001': {
@@ -44,9 +44,9 @@ const scenarioScenes: Record<string, ScenarioScene> = {
     titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินหายใจ',
     titleEn: 'Respiratory test clinical scene',
     descriptionTh:
-      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินหายใจของผู้ป่วย',
+      'ลักษณะทั่วไปของผู้ป่วย: เพศชาย วัยผู้ใหญ่ สวมเสื้อยืดสีขาว กางเกงขายาวสีเข้ม นั่งอยู่บนเก้าอี้ไม้ สีหน้าไม่สบาย และใช้มือจับบริเวณลำคอ',
     descriptionEn:
-      'Use this illustration as additional context for the patient’s respiratory symptoms.',
+      'General appearance: Adult male wearing a white T-shirt and dark long pants, seated on a wooden chair, appearing unwell and touching his throat with one hand.',
     alt: 'Respiratory test clinical scenario',
   },
   'respiratory-exercise-001': {
@@ -54,9 +54,9 @@ const scenarioScenes: Record<string, ScenarioScene> = {
     titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินหายใจ',
     titleEn: 'Respiratory practice clinical scene',
     descriptionTh:
-      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินหายใจของผู้ป่วย',
+      'ลักษณะทั่วไปของผู้ป่วย: เพศชาย วัยกลางคน สวมเสื้อยืดสีน้ำเงิน กางเกงขาสั้นสีเทา นั่งอยู่บนเก้าอี้ไม้ สีหน้าอ่อนเพลีย และใช้กระดาษปิดบริเวณปาก',
     descriptionEn:
-      'Use this illustration as additional context for the patient’s respiratory symptoms.',
+      'General appearance: Middle-aged male wearing a blue T-shirt and gray shorts, seated on a wooden chair, appearing fatigued and holding a tissue over his mouth.',
     alt: 'Respiratory practice clinical scenario',
   },
   'urinary-test-001': {
@@ -64,9 +64,9 @@ const scenarioScenes: Record<string, ScenarioScene> = {
     titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินปัสสาวะ',
     titleEn: 'Urinary test clinical scene',
     descriptionTh:
-      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินปัสสาวะของผู้ป่วย',
+      'ลักษณะทั่วไปของผู้ป่วย: เพศหญิง วัยผู้ใหญ่ สวมเสื้อยืดสีเทา กางเกงขายาวสีกรมท่า นั่งอยู่บนเก้าอี้นวม สีหน้ากังวล และวางมือบริเวณหน้าตัก',
     descriptionEn:
-      'Use this illustration as additional context for the patient’s urinary symptoms.',
+      'General appearance: Adult female wearing a gray T-shirt and dark blue long pants, seated on an armchair with a worried facial expression and hands resting on her lap.',
     alt: 'Urinary test clinical scenario',
   },
   'urinary-exercise-001': {
@@ -74,9 +74,9 @@ const scenarioScenes: Record<string, ScenarioScene> = {
     titleTh: 'ภาพประกอบสถานการณ์ระบบทางเดินปัสสาวะ',
     titleEn: 'Urinary practice clinical scene',
     descriptionTh:
-      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบทางเดินปัสสาวะของผู้ป่วย',
+      'ลักษณะทั่วไปของผู้ป่วย: เพศหญิง วัยผู้ใหญ่ สวมเสื้อยืดสีฟ้าเทา กางเกงขายาวสีเทา นั่งอยู่บนเก้าอี้ไม้ สีหน้ากังวล และวางมือประสานกันบริเวณหน้าตัก',
     descriptionEn:
-      'Use this illustration as additional context for the patient’s urinary symptoms.',
+      'General appearance: Adult female wearing a blue-gray T-shirt and gray long pants, seated on a wooden chair with a worried facial expression and hands folded on her lap.',
     alt: 'Urinary practice clinical scenario',
   },
   'musculoskeletal-test-001': {
@@ -84,9 +84,9 @@ const scenarioScenes: Record<string, ScenarioScene> = {
     titleTh: 'ภาพประกอบสถานการณ์ระบบกระดูกและกล้ามเนื้อ',
     titleEn: 'Musculoskeletal test clinical scene',
     descriptionTh:
-      'ใช้ภาพประกอบนี้เป็นบริบทเพิ่มเติมในการประเมินอาการทางระบบกระดูกและกล้ามเนื้อของผู้ป่วย',
+      'ลักษณะทั่วไปของผู้ป่วย: เพศชายสูงอายุ สวมเสื้อยืดสีฟ้า กางเกงขายาวสีเข้ม นั่งอยู่บนเก้าอี้ทำงาน สีหน้าเจ็บปวด และใช้มือจับบริเวณหลังส่วนล่าง',
     descriptionEn:
-      'Use this illustration as additional context for the patient’s musculoskeletal symptoms.',
+      'General appearance: Older male wearing a blue T-shirt and dark long pants, seated on an office chair, appearing in pain and holding his lower back with one hand.',
     alt: 'Musculoskeletal test clinical scenario',
   },
   'back-pain-scenario-001': {

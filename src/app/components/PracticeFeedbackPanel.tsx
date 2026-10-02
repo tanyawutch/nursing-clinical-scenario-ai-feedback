@@ -74,14 +74,26 @@ export function parseSubmittedSections(
     ]
   }
 
-  const blocks = cleanAnswer.split(/\n{2,}/)
+  const normalizedAnswer = cleanAnswer.replace(/\r\n/g, '\n')
 
   return fields.map((field) => {
     const labels = [field.labelTh, field.labelEn]
-    const block = blocks.find((item) =>
-      labels.some((label) => item.startsWith(label + ':'))
+    const labelPattern = labels
+      .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|')
+    const nextLabelPattern = fields
+      .filter((item) => item.id !== field.id)
+      .flatMap((item) => [item.labelTh, item.labelEn])
+      .map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|')
+    const answerMatch = normalizedAnswer.match(
+      new RegExp(
+        `(?:^|\\n)(?:${labelPattern}):\\s*([\\s\\S]*?)${
+          nextLabelPattern ? `(?=\\n(?:${nextLabelPattern}):|$)` : '$'
+        }`
+      )
     )
-    const parsedAnswer = block ? block.slice(block.indexOf(':') + 1).trim() : ''
+    const parsedAnswer = answerMatch?.[1]?.trim() ?? ''
 
     return {
       id: field.id,

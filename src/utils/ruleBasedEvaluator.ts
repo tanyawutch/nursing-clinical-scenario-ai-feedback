@@ -58,6 +58,19 @@ function normalizeText(text: string) {
     .trim()
 }
 
+function cleanRubricText(text: string) {
+  return text.replace(/^[\s\-•·]+/, '').trim()
+}
+
+function normalizeForFlexibleMatching(text: string) {
+  return cleanRubricText(text)
+    .normalize('NFC')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function hasNearbyNegation(normalizedText: string, startIndex: number) {
   const prefix = normalizedText.slice(Math.max(0, startIndex - 16), startIndex)
 
@@ -69,7 +82,7 @@ function keywordExistsInText(
   keyword: string,
   avoidNegation = true
 ) {
-  const normalizedKeyword = normalizeText(keyword)
+  const normalizedKeyword = cleanRubricText(normalizeText(keyword))
 
   if (!normalizedKeyword) {
     return false
@@ -88,11 +101,19 @@ function keywordExistsInText(
     )
   }
 
-  return false
+  const flexibleText = normalizeForFlexibleMatching(normalizedText)
+  const flexibleKeyword = normalizeForFlexibleMatching(normalizedKeyword)
+  const flexibleIndex = flexibleText.indexOf(flexibleKeyword)
+
+  if (flexibleIndex < 0) {
+    return false
+  }
+
+  return !avoidNegation || !hasNearbyNegation(flexibleText, flexibleIndex)
 }
 
 function cleanKeywordList(keywords: string[]) {
-  return keywords.map((keyword) => keyword.trim()).filter(Boolean)
+  return keywords.map((keyword) => cleanRubricText(keyword)).filter(Boolean)
 }
 
 function cleanKeywordGroups(groups?: KeywordGroup[] | null) {
@@ -102,7 +123,7 @@ function cleanKeywordGroups(groups?: KeywordGroup[] | null) {
 
   return groups
     .map((group) => ({
-      label: group.label.trim(),
+      label: cleanRubricText(group.label),
       keywords: cleanKeywordList(group.keywords ?? []),
       points: Number.isFinite(group.points) ? Number(group.points) : 1,
       category: group.category?.trim() || 'General',

@@ -221,6 +221,29 @@ function buildClosingFeedback({
     : 'รอบนี้ยังไม่ผ่าน แต่ถือว่าเป็นข้อมูลสำคัญสำหรับการฝึก ลองทบทวนเฉลยและนำไปปรับใช้กับสถานการณ์ถัดไปนะ'
 }
 
+const referenceSectionPatterns = [
+  /ระบบสรุป\s*PI\s*-/i,
+  /ระบบแสดงผลการตรวจร่างกาย\s*\(Physical Examination;?\s*PE\)/i,
+  /General appearance\s*\([^)]*\)/i,
+  /Physical Examination\s*;?\s*PE/i,
+  /(?:HEENT|Respiratory System|Cardiovascular|Gastrointestinal|Musculoskeletal|Genitourinary|Neurology)\s*:/i,
+  /(?:Plan for treatment|Specific treatment|Symptomatic treatment|Plan for Nursing Care)\s*:?/i,
+  /(?:D|M|E|T|H|O)\s*[=–-]\s*[A-Za-z]+/i,
+  /(?:การวินิจฉัย|การตรวจ|การแปลผล|การรักษา|การพยาบาล|คำแนะนำผู้ป่วย)\s*:/i,
+]
+
+function formatReferenceAnswer(answer: string) {
+  const normalized = answer.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').trim()
+  const withSectionBreaks = referenceSectionPatterns.reduce((text, pattern) => {
+    return text.replace(pattern, (match) => `\n\n${match.trim()}`)
+  }, normalized)
+
+  return withSectionBreaks
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+}
+
 export default function PracticeFeedbackPanel({
   lang,
   score,
@@ -413,13 +436,30 @@ export default function PracticeFeedbackPanel({
                 {copy.showAnswer}
               </span>
             </summary>
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
               <p className="text-sm font-bold text-slate-950">
                 {copy.modelAnswer}
               </p>
-              <p className="mt-2 whitespace-pre-line text-base leading-7 text-slate-900">
-                {modelAnswer}
-              </p>
+              {formatReferenceAnswer(modelAnswer).map((block, index) => {
+                const headingMatch = block.match(
+                  /^(ระบบสรุป\s*PI|ระบบแสดงผลการตรวจร่างกาย|General appearance|Physical Examination|HEENT|Respiratory System|Cardiovascular|Gastrointestinal|Musculoskeletal|Genitourinary|Neurology|Plan for treatment|Specific treatment|Symptomatic treatment|Plan for Nursing Care|[DME T HO]\s*[=–-][^:]+|การวินิจฉัย|การตรวจ|การแปลผล|การรักษา|การพยาบาล|คำแนะนำผู้ป่วย)\s*:?[\s-]*/i
+                )
+                const heading = headingMatch?.[1]?.trim()
+                const body = headingMatch
+                  ? block.slice(headingMatch[0].length).trim()
+                  : block
+
+                return (
+                  <div key={`${index}-${block.slice(0, 24)}`} className="rounded-xl border border-slate-200 bg-white p-4">
+                    {heading ? (
+                      <p className="text-sm font-bold text-[#C45D0C]">{heading}</p>
+                    ) : null}
+                    <p className={`${heading ? 'mt-2' : ''} whitespace-pre-line text-base leading-8 text-slate-900`}>
+                      {body || block}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           </details>
         ) : null}

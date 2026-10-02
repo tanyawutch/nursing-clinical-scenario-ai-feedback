@@ -52,25 +52,47 @@ type ScenarioSeedFile = {
   scenarios: ScenarioSeed[];
 };
 
-function flatKeywords(groups: unknown) {
+function cleanRubricText(value: string) {
+  return value.replace(/^[\s\-•·]+/, "").trim();
+}
+
+function cleanKeywordList(keywords: unknown) {
+  if (!Array.isArray(keywords)) {
+    return [];
+  }
+
+  return keywords
+    .filter((keyword): keyword is string => typeof keyword === "string")
+    .map(cleanRubricText)
+    .filter(Boolean);
+}
+
+function cleanKeywordGroups(groups: unknown) {
   if (!Array.isArray(groups)) {
     return [];
   }
 
   return groups.flatMap((group) => {
-    if (
-      group &&
-      typeof group === "object" &&
-      "keywords" in group &&
-      Array.isArray((group as { keywords: unknown }).keywords)
-    ) {
-      return (group as { keywords: string[] }).keywords.filter(
-        (keyword) => typeof keyword === "string" && keyword.trim()
-      );
+    if (!group || typeof group !== "object") {
+      return [];
     }
 
-    return [];
+    const source = group as Record<string, unknown>;
+    const label = typeof source.label === "string"
+      ? cleanRubricText(source.label)
+      : "";
+    const keywords = cleanKeywordList(source.keywords);
+
+    if (!label || keywords.length === 0) {
+      return [];
+    }
+
+    return [{ ...source, label, keywords }];
   });
+}
+
+function flatKeywords(groups: unknown) {
+  return cleanKeywordGroups(groups).flatMap((group) => group.keywords);
 }
 
 async function main() {
@@ -90,10 +112,10 @@ async function main() {
         isEnabled: true,
         sortOrder: index + 1,
         rubric: scenarioSeed.rubric,
-        requiredKeywords: scenarioSeed.requiredKeywords,
-        optionalKeywords: scenarioSeed.optionalKeywords,
-        requiredKeywordGroups: scenarioSeed.requiredKeywordGroups as object,
-        optionalKeywordGroups: scenarioSeed.optionalKeywordGroups as object,
+        requiredKeywords: cleanKeywordList(scenarioSeed.requiredKeywords),
+        optionalKeywords: cleanKeywordList(scenarioSeed.optionalKeywords),
+        requiredKeywordGroups: cleanKeywordGroups(scenarioSeed.requiredKeywordGroups) as object,
+        optionalKeywordGroups: cleanKeywordGroups(scenarioSeed.optionalKeywordGroups) as object,
         modelAnswer: scenarioSeed.modelAnswer,
       },
       create: {
@@ -105,10 +127,10 @@ async function main() {
         isEnabled: true,
         sortOrder: index + 1,
         rubric: scenarioSeed.rubric,
-        requiredKeywords: scenarioSeed.requiredKeywords,
-        optionalKeywords: scenarioSeed.optionalKeywords,
-        requiredKeywordGroups: scenarioSeed.requiredKeywordGroups as object,
-        optionalKeywordGroups: scenarioSeed.optionalKeywordGroups as object,
+        requiredKeywords: cleanKeywordList(scenarioSeed.requiredKeywords),
+        optionalKeywords: cleanKeywordList(scenarioSeed.optionalKeywords),
+        requiredKeywordGroups: cleanKeywordGroups(scenarioSeed.requiredKeywordGroups) as object,
+        optionalKeywordGroups: cleanKeywordGroups(scenarioSeed.optionalKeywordGroups) as object,
         modelAnswer: scenarioSeed.modelAnswer,
       },
     });
@@ -130,8 +152,8 @@ async function main() {
           rubric: stepSeed.rubric,
           requiredKeywords,
           optionalKeywords,
-          requiredKeywordGroups: stepSeed.requiredKeywordGroups as object,
-          optionalKeywordGroups: stepSeed.optionalKeywordGroups as object,
+          requiredKeywordGroups: cleanKeywordGroups(stepSeed.requiredKeywordGroups) as object,
+          optionalKeywordGroups: cleanKeywordGroups(stepSeed.optionalKeywordGroups) as object,
           modelAnswer: stepSeed.modelAnswer,
           maxScore: stepSeed.maxScore,
           passScore: stepSeed.passScore,
@@ -145,8 +167,8 @@ async function main() {
           rubric: stepSeed.rubric,
           requiredKeywords,
           optionalKeywords,
-          requiredKeywordGroups: stepSeed.requiredKeywordGroups as object,
-          optionalKeywordGroups: stepSeed.optionalKeywordGroups as object,
+          requiredKeywordGroups: cleanKeywordGroups(stepSeed.requiredKeywordGroups) as object,
+          optionalKeywordGroups: cleanKeywordGroups(stepSeed.optionalKeywordGroups) as object,
           modelAnswer: stepSeed.modelAnswer,
           maxScore: stepSeed.maxScore,
           passScore: stepSeed.passScore,

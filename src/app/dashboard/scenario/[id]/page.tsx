@@ -58,6 +58,38 @@ function extractGeneralAppearance(description: string) {
   return match?.[1]?.trim() ?? ''
 }
 
+function PatientDescription({ description }: { description: string }) {
+  const headingPattern =
+    /^(ข้อมูลทั่วไป \(General information\):|ประวัติการเจ็บป่วยในอดีต \(Past History\)|พฤติกรรมสุขภาพ \(Health behavior\)|อาการสำคัญที่นำผู้ป่วยมาโรงพยาบาล.*?:)(.*)$/
+  const blocks = description
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+
+  return (
+    <div className="mt-3 space-y-5 text-base leading-8 text-slate-800">
+      {blocks.map((block) => {
+        const match = block.match(headingPattern)
+
+        if (!match) {
+          return (
+            <p key={block} className="whitespace-pre-line">
+              {block}
+            </p>
+          )
+        }
+
+        return (
+          <p key={block} className="whitespace-pre-line">
+            <strong className="font-bold text-slate-950">{match[1]}</strong>
+            {match[2] ? ` ${match[2].trim()}` : ''}
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
 export default async function AssessmentPage({
   params,
   searchParams,
@@ -187,6 +219,7 @@ export default async function AssessmentPage({
       pass: 'ผ่าน',
       start: 'ทำข้อนี้',
       active: 'กำลังทำ',
+      caseSummary: 'สรุปกรณีศึกษา',
     },
     en: {
       back: 'Back to Dashboard',
@@ -202,6 +235,7 @@ export default async function AssessmentPage({
       pass: 'pass',
       start: 'Start task',
       active: 'Current task',
+      caseSummary: 'Case summary',
     },
   }[lang]
   const scenarioDisplayTitle = getScenarioDisplayTitle(scenario.id, lang)
@@ -345,9 +379,7 @@ export default async function AssessmentPage({
                 {copy.patientProfile}
               </h2>
 
-              <p className="mt-3 whitespace-pre-line text-base leading-8 text-slate-800">
-                {patientDescription}
-              </p>
+              <PatientDescription description={patientDescription} />
             </div>
           </div>
         </section>
@@ -376,6 +408,17 @@ export default async function AssessmentPage({
           }
           latestAttemptStep={latestAttemptStep}
         />
+
+        {scenario.modelAnswer ? (
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
+            <h2 className="text-xl font-bold text-slate-950">
+              {copy.caseSummary}
+            </h2>
+            <p className="mt-3 whitespace-pre-line text-base leading-8 text-slate-800">
+              {scenario.modelAnswer}
+            </p>
+          </section>
+        ) : null}
       </main>
     </div>
   )

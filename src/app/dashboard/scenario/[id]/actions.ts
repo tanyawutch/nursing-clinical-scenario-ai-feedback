@@ -412,7 +412,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
     }
 
     const isCorrect = finalScore === 'correct'
-    const shouldRevealModelAnswer = nextAttemptCount >= maxStepAttempts
+    const shouldRevealModelAnswer = isCorrect || nextAttemptCount >= maxStepAttempts
     const shouldLockStep = isCorrect || shouldRevealModelAnswer
 
     await prisma.attemptStep.upsert({
@@ -669,3 +669,4 @@ ${interventions.trim()}
 
   redirect(`/dashboard/scenario/${scenario.id}/success?attemptId=${attempt.id}`)
 }
+

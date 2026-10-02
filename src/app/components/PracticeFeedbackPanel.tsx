@@ -263,8 +263,10 @@ export default function PracticeFeedbackPanel({
       answers: 'คำตอบของผู้เรียน',
       noAnswer: 'ยังไม่ได้ตอบหัวข้อนี้',
       missing: 'ประเด็นที่ควรเพิ่ม',
-      final: 'สรุปท้ายแบบฝึก',
-      modelAnswer: 'เฉลยอ้างอิง',
+      final: 'ภาพรวมผลงานของคุณ',
+      modelAnswer: 'เฉลย',
+      showAnswer: 'ดูเฉลย',
+      hideAnswer: 'ซ่อนเฉลย',
     },
     en: {
       score: 'Score',
@@ -276,6 +278,8 @@ export default function PracticeFeedbackPanel({
       missing: 'Points to improve',
       final: 'Final note',
       modelAnswer: 'Reference answer',
+      showAnswer: 'Show answer',
+      hideAnswer: 'Hide answer',
     },
   }[lang]
 
@@ -391,14 +395,21 @@ export default function PracticeFeedbackPanel({
         </div>
 
         {modelAnswerRevealed && modelAnswer ? (
-          <div className="mt-5 rounded-xl border border-slate-300 bg-slate-50 p-4">
-            <p className="text-sm font-bold text-slate-950">
-              {copy.modelAnswer}
-            </p>
-            <p className="mt-2 whitespace-pre-line text-base leading-7 text-slate-900">
-              {modelAnswer}
-            </p>
-          </div>
+          <details className="mt-5 rounded-xl border border-slate-300 bg-slate-50 p-4">
+            <summary className="cursor-pointer list-none">
+              <span className="inline-flex items-center rounded-xl bg-[#F5821F] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#D96F14]">
+                {copy.showAnswer}
+              </span>
+            </summary>
+            <div className="mt-4">
+              <p className="text-sm font-bold text-slate-950">
+                {copy.modelAnswer}
+              </p>
+              <p className="mt-2 whitespace-pre-line text-base leading-7 text-slate-900">
+                {modelAnswer}
+              </p>
+            </div>
+          </details>
         ) : null}
       </div>
     </div>

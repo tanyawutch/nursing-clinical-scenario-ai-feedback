@@ -171,6 +171,32 @@ function buildCombinedAnswer(
     .trim()
 }
 
+function extractPhysicalExamFindings(modelAnswer: string | null) {
+  if (!modelAnswer) {
+    return []
+  }
+
+  const physicalExamStart = modelAnswer.search(
+    /ระบบแสดงผลการตรวจร่างกาย|Physical Examination|PE/i
+  )
+
+  if (physicalExamStart < 0) {
+    return []
+  }
+
+  const physicalExamText = modelAnswer.slice(physicalExamStart)
+  const cleanedText = physicalExamText
+    .replace(/^ระบบแสดงผลการตรวจร่างกาย\s*/i, '')
+    .replace(/\(Physical Examination;?\s*PE\)/i, '')
+    .trim()
+
+  return cleanedText
+    .split(/[,;]|(?:\s+-\s+)|(?:\s{2,})/)
+    .map((finding) => finding.trim())
+    .filter((finding) => finding.length > 2)
+    .slice(0, 32)
+}
+
 export default function ScenarioStepPractice({
   lang,
   scenarioId,
@@ -180,7 +206,12 @@ export default function ScenarioStepPractice({
   latestAttemptStep,
 }: ScenarioStepPracticeProps) {
   const [isPending, startTransition] = useTransition()
+  const [selectedFindings, setSelectedFindings] = useState<string[]>([])
   const fields = useMemo(() => getFields(step?.formSchema), [step?.formSchema])
+  const physicalExamFindings = useMemo(
+    () => extractPhysicalExamFindings(step?.modelAnswer ?? null),
+    [step?.modelAnswer]
+  )
   const [answers, setAnswers] = useState<Record<string, string>>(() => {
     if (fields.length === 0) {
       return { freeText: latestAttemptStep?.answer || '' }
@@ -270,12 +301,24 @@ export default function ScenarioStepPractice({
     lang
   )
   const scenarioScene = scenarioScenes[scenarioId]
+  const shouldShowPhysicalExamPicker =
+    step.order === 1 &&
+    latestAttemptStep?.modelAnswerRevealed &&
+    physicalExamFindings.length > 0
 
   function updateAnswer(fieldId: string, value: string) {
     setAnswers((current) => ({
       ...current,
       [fieldId]: value.slice(0, MAX_STEP_ANSWER_LENGTH),
     }))
+  }
+
+  function toggleFinding(finding: string) {
+    setSelectedFindings((current) =>
+      current.includes(finding)
+        ? current.filter((item) => item !== finding)
+        : [...current, finding]
+    )
   }
 
   return (
@@ -288,7 +331,7 @@ export default function ScenarioStepPractice({
             </p>
 
             <h2 className="mt-3 text-2xl font-bold leading-8 text-slate-950 sm:text-3xl">
-              {lang === 'th' ? `งานที่ ${step.order}: ` : `Task ${step.order}: `}
+              {lang === 'th' ? `ข้อ ${step.order}: ` : `Task ${step.order}: `}
               {step.title}
             </h2>
 
@@ -468,6 +511,36 @@ export default function ScenarioStepPractice({
               modelAnswerRevealed={latestAttemptStep.modelAnswerRevealed}
               remainingAttempts={remainingAttempts}
             />
+
+            {shouldShowPhysicalExamPicker ? (
+              <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                <p className="text-sm font-bold text-blue-950">
+                  {lang === 'th'
+                    ? 'จากผลการตรวจร่างกายที่กำหนดให้ ให้คลิกผลการตรวจร่างกายที่มีความผิดปกติ เพื่อนำไปสู่การวินิจฉัยแยกโรค (Differential diagnosis)'
+                    : 'Click abnormal physical examination findings that support the differential diagnosis.'}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {physicalExamFindings.map((finding) => {
+                    const selected = selectedFindings.includes(finding)
+
+                    return (
+                      <button
+                        key={finding}
+                        type="button"
+                        onClick={() => toggleFinding(finding)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                          selected
+                            ? 'border-blue-600 bg-blue-600 text-white'
+                            : 'border-blue-200 bg-white text-blue-900 hover:border-blue-400'
+                        }`}
+                      >
+                        {finding}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

@@ -141,68 +141,56 @@ export default async function AssessmentPage({
     scenario.steps.find((step) => step.id === resolvedSearchParams.stepId) ??
     firstStep
 
-  const latestAttemptStep =
-    targetStep && resolvedSearchParams.attemptId
-      ? await prisma.attemptStep.findFirst({
-          where: {
-            attemptId: resolvedSearchParams.attemptId,
-            scenarioStepId: targetStep.id,
-            attempt: {
-              scenarioId: scenario.id,
-              isCompleted: false,
-              student: {
-                email: user.email,
-              },
-            },
-          },
-          select: {
-            answer: true,
-            aiScore: true,
-            aiReasoning: true,
-            aiMissingElements: true,
-            aiStatus: true,
-            numericScore: true,
-            maxScore: true,
-            matchedElements: true,
-            evaluationDetails: true,
-            attemptCount: true,
-            isLocked: true,
-            modelAnswerRevealed: true,
-          },
-        })
-      : targetStep
-        ? await prisma.attemptStep.findFirst({
-            where: {
-              scenarioStepId: targetStep.id,
-              attempt: {
-                scenarioId: scenario.id,
-                isCompleted: false,
-                student: {
-                  email: user.email,
-                },
-              },
-            },
-            orderBy: {
-              attempt: {
-                createdAt: 'desc',
-              },
-            },
-            select: {
-              answer: true,
-              aiScore: true,
-              aiReasoning: true,
-              aiMissingElements: true,
-              aiStatus: true,
-              numericScore: true,
-              maxScore: true,
-              matchedElements: true,
-              evaluationDetails: true,
-              attemptCount: true,
-              isLocked: true,
-              modelAnswerRevealed: true,
-            },
-          })
-        : null
+  const activeAttempt = await prisma.attempt.findFirst({
+    where: {
+      ...(resolvedSearchParams.attemptId
+        ? { id: resolvedSearchParams.attemptId }
+        : {}),
+      scenarioId: scenario.id,
+      isCompleted: false,
+      student: {
+        email: user.email,
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    select: {
+      id: true,
+      attemptSteps: {
+        select: {
+          scenarioStepId: true,
+          answer: true,
+          aiScore: true,
+          aiReasoning: true,
+          aiMissingElements: true,
+          aiStatus: true,
+          numericScore: true,
+          maxScore: true,
+          matchedElements: true,
+          evaluationDetails: true,
+          attemptCount: true,
+          isLocked: true,
+          modelAnswerRevealed: true,
+        },
+      },
+    },
+  })
+
+  const latestAttemptStep = targetStep
+    ? (activeAttempt?.attemptSteps.find(
+        (step) => step.scenarioStepId === targetStep.id
+      ) ?? null)
+    : null
+  const allStepsCompleted =
+    scenario.steps.length > 0 &&
+    scenario.steps.every((step) => {
+      const attemptStep = activeAttempt?.attemptSteps.find(
+        (item) => item.scenarioStepId === step.id
+      )
+
+      return Boolean(attemptStep?.isLocked && attemptStep.modelAnswerRevealed)
+    })
 
   const copy = {
     th: {
@@ -353,7 +341,9 @@ export default async function AssessmentPage({
                   </p>
 
                   <Link
-                    href={`/dashboard/scenario/${scenario.id}?stepId=${step.id}&lang=${lang}`}
+                    href={`/dashboard/scenario/${scenario.id}?stepId=${step.id}${
+                      activeAttempt ? `&attemptId=${activeAttempt.id}` : ''
+                    }&lang=${lang}`}
                     className={`mt-4 inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-bold transition ${
                       isActive
                         ? 'bg-[#F5821F] text-white'
@@ -409,7 +399,7 @@ export default async function AssessmentPage({
           latestAttemptStep={latestAttemptStep}
         />
 
-        {scenario.modelAnswer ? (
+        {allStepsCompleted && scenario.modelAnswer ? (
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
             <h2 className="text-xl font-bold text-slate-950">
               {copy.caseSummary}

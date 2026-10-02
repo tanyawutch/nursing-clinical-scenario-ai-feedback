@@ -49,6 +49,15 @@ function formatPatientDescription(description: string) {
     .trim()
 }
 
+function extractGeneralAppearance(description: string) {
+  const normalizedDescription = description.replace(/\s+/g, ' ').trim()
+  const match = normalizedDescription.match(
+    /(ลักษณะทั่วไปของผู้ป่วย:\s*.*?)(?=\s*ข้อมูลทั่วไป \(General information\):|\s*ประวัติการเจ็บป่วย|\s*พฤติกรรมสุขภาพ|\s*อาการสำคัญที่นำผู้ป่วยมาโรงพยาบาล|$)/
+  )
+
+  return match?.[1]?.trim() ?? ''
+}
+
 export default async function AssessmentPage({
   params,
   searchParams,
@@ -197,6 +206,7 @@ export default async function AssessmentPage({
   }[lang]
   const scenarioDisplayTitle = getScenarioDisplayTitle(scenario.id, lang)
   const patientDescription = formatPatientDescription(scenario.description)
+  const patientGeneralAppearance = extractGeneralAppearance(scenario.description)
   const maxStepAttempts = getMaxStepAttempts(scenario)
 
   return (
@@ -348,6 +358,7 @@ export default async function AssessmentPage({
           }-${latestAttemptStep?.isLocked ?? false}-${lang}`}
           lang={lang}
           scenarioId={scenario.id}
+          patientGeneralAppearance={patientGeneralAppearance}
           maxStepAttempts={maxStepAttempts}
           step={
             targetStep

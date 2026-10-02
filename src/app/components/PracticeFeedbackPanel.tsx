@@ -221,20 +221,82 @@ function buildClosingFeedback({
     : 'รอบนี้ยังไม่ผ่าน แต่ถือว่าเป็นข้อมูลสำคัญสำหรับการฝึก ลองทบทวนเฉลยและนำไปปรับใช้กับสถานการณ์ถัดไปนะ'
 }
 
-const referenceSectionPatterns = [
+type ReferenceAnswerSection = {
+  heading?: string
+  body: string
+}
+
+const genericReferenceSectionPatterns = [
   /ระบบสรุป\s*PI\s*-/i,
-  /ระบบแสดงผลการตรวจร่างกาย\s*\(Physical Examination;?\s*PE\)/i,
-  /General appearance\s*\([^)]*\)/i,
-  /Physical Examination\s*;?\s*PE/i,
-  /(?:HEENT|Respiratory System|Cardiovascular|Gastrointestinal|Musculoskeletal|Genitourinary|Neurology)\s*:/i,
   /(?:Plan for treatment|Specific treatment|Symptomatic treatment|Plan for Nursing Care)\s*:?/i,
   /(?:D|M|E|T|H|O)\s*[=–-]\s*[A-Za-z]+/i,
   /(?:การวินิจฉัย|การตรวจ|การแปลผล|การรักษา|การพยาบาล|คำแนะนำผู้ป่วย)\s*:/i,
 ]
 
-function formatReferenceAnswer(answer: string) {
+function normalizeReferenceBody(body: string) {
+  return body
+    .replace(/^\s*[;:(]+\s*/g, '')
+    .replace(/^(?:Physical Examination\s*;?\s*PE)\s*/i, '')
+    .replace(/^General appearance\s*\([^)]*\)\s*[-:]?\s*/i, '')
+    .replace(/\s+(?=(?:HEENT|Respiratory System|Cardiovascular|Gastrointestinal|Musculoskeletal|Genitourinary|Neurology)\s*:)/gi, '\n')
+    .trim()
+}
+
+function getGenericReferenceSection(block: string): ReferenceAnswerSection {
+  const headingMatch = block.match(
+    /^(ระบบสรุป\s*PI|Plan for treatment|Specific treatment|Symptomatic treatment|Plan for Nursing Care|[DME T HO]\s*[=–-][^:]+|การวินิจฉัย|การตรวจ|การแปลผล|การรักษา|การพยาบาล|คำแนะนำผู้ป่วย)\s*:?\s*/i
+  )
+
+  return {
+    heading: headingMatch?.[1]?.trim(),
+    body: headingMatch ? block.slice(headingMatch[0].length).trim() : block,
+  }
+}
+
+function formatReferenceAnswer(answer: string, lang: PageLanguage): ReferenceAnswerSection[] {
   const normalized = answer.replace(/\r\n/g, '\n').replace(/[ \t]+/g, ' ').trim()
-  const withSectionBreaks = referenceSectionPatterns.reduce((text, pattern) => {
+
+  const clinicalMarkers = [
+    {
+      key: 'pi',
+      pattern: /ระบบสรุป\s*PI\s*-/i,
+      heading: lang === 'th' ? 'ระบบสรุป PI' : 'PI summary',
+    },
+    {
+      key: 'ros',
+      pattern: /ระบบแสดงข้อมูลที่ได้จากการทบทวนอาการตามระบบ\s*\(Review of System:\s*ROS\)/i,
+      heading:
+        lang === 'th'
+          ? 'ระบบแสดงข้อมูลที่ได้จากการทบทวนอาการตามระบบ (Review of System: ROS)'
+          : 'Review of System (ROS)',
+    },
+    {
+      key: 'pe',
+      pattern: /ระบบแสดงผลการตรวจร่างกาย\s*\(Physical Examination;?\s*PE\)/i,
+      heading:
+        lang === 'th'
+          ? 'ระบบแสดงผลการตรวจร่างกาย (Physical Examination; PE)'
+          : 'Physical Examination (PE)',
+    },
+  ]
+    .map((marker) => ({ ...marker, match: marker.pattern.exec(normalized) }))
+    .filter((marker) => marker.match)
+    .sort((a, b) => (a.match?.index ?? 0) - (b.match?.index ?? 0))
+
+  if (clinicalMarkers.length > 0) {
+    return clinicalMarkers.map((marker, index) => {
+      const match = marker.match!
+      const start = match.index! + match[0].length
+      const end = clinicalMarkers[index + 1]?.match?.index ?? normalized.length
+
+      return {
+        heading: marker.heading,
+        body: normalizeReferenceBody(normalized.slice(start, end)),
+      }
+    })
+  }
+
+  const withSectionBreaks = genericReferenceSectionPatterns.reduce((text, pattern) => {
     return text.replace(pattern, (match) => `\n\n${match.trim()}`)
   }, normalized)
 
@@ -242,6 +304,7 @@ function formatReferenceAnswer(answer: string) {
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
+    .map(getGenericReferenceSection)
 }
 
 export default function PracticeFeedbackPanel({
@@ -440,22 +503,14 @@ export default function PracticeFeedbackPanel({
               <p className="text-sm font-bold text-slate-950">
                 {copy.modelAnswer}
               </p>
-              {formatReferenceAnswer(modelAnswer).map((block, index) => {
-                const headingMatch = block.match(
-                  /^(ระบบสรุป\s*PI|ระบบแสดงผลการตรวจร่างกาย|General appearance|Physical Examination|HEENT|Respiratory System|Cardiovascular|Gastrointestinal|Musculoskeletal|Genitourinary|Neurology|Plan for treatment|Specific treatment|Symptomatic treatment|Plan for Nursing Care|[DME T HO]\s*[=–-][^:]+|การวินิจฉัย|การตรวจ|การแปลผล|การรักษา|การพยาบาล|คำแนะนำผู้ป่วย)\s*:?[\s-]*/i
-                )
-                const heading = headingMatch?.[1]?.trim()
-                const body = headingMatch
-                  ? block.slice(headingMatch[0].length).trim()
-                  : block
-
+              {formatReferenceAnswer(modelAnswer, lang).map((section, index) => {
                 return (
-                  <div key={`${index}-${block.slice(0, 24)}`} className="rounded-xl border border-slate-200 bg-white p-4">
-                    {heading ? (
-                      <p className="text-sm font-bold text-[#C45D0C]">{heading}</p>
+                  <div key={`${index}-${section.body.slice(0, 24)}`} className="rounded-xl border border-slate-200 bg-white p-4">
+                    {section.heading ? (
+                      <p className="text-sm font-bold text-[#C45D0C]">{section.heading}</p>
                     ) : null}
-                    <p className={`${heading ? 'mt-2' : ''} whitespace-pre-line text-base leading-8 text-slate-900`}>
-                      {body || block}
+                    <p className={`${section.heading ? 'mt-2' : ''} whitespace-pre-line text-base leading-8 text-slate-900`}>
+                      {section.body}
                     </p>
                   </div>
                 )

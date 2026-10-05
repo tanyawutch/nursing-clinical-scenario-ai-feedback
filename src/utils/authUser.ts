@@ -22,6 +22,12 @@ export function isAdminEmail(email?: string | null) {
   return adminEmails.includes(normalizedEmail)
 }
 
+export function isAdminUser(user?: Pick<User, 'email' | 'app_metadata'> | null) {
+  if (!user) return false
+
+  return isAdminEmail(user.email) || user.app_metadata?.role === 'admin'
+}
+
 export function needsProfileSetup(student: {
   studentId: string
   name: string | null

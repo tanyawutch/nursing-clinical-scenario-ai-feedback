@@ -6,7 +6,7 @@ import prisma from '@/utils/prisma'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { evaluateWithGemini } from '@/utils/aiEvaluator'
-import { getOrCreateStudentProfile, isAdminEmail } from '@/utils/authUser'
+import { getOrCreateStudentProfile, isAdminUser } from '@/utils/authUser'
 import {
   evaluateWithRuleBasedLayer,
   type KeywordGroup,
@@ -240,7 +240,10 @@ async function getAuthenticatedStudent() {
     throw new Error('Unauthorized')
   }
 
-  return await getOrCreateStudentProfile(user)
+  return {
+    user,
+    student: await getOrCreateStudentProfile(user),
+  }
 }
 
 async function completeAttemptIfAllStepsFinished({
@@ -340,7 +343,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
     throw new Error('Step answer must be 2,000 characters or fewer')
   }
 
-  const dbStudent = await getAuthenticatedStudent()
+  const { student: dbStudent, user } = await getAuthenticatedStudent()
 
   const scenario = await prisma.scenario.findUnique({
     where: {
@@ -352,7 +355,7 @@ export async function submitScenarioStepAnswer(formData: FormData) {
     throw new Error('Scenario not found')
   }
 
-  if (!scenario.isEnabled && !isAdminEmail(dbStudent.email)) {
+  if (!scenario.isEnabled && !isAdminUser(user)) {
     throw new Error('This scenario is currently closed')
   }
 
@@ -602,7 +605,7 @@ export async function resetScenarioPractice(formData: FormData) {
     throw new Error('Scenario ID is missing')
   }
 
-  const dbStudent = await getAuthenticatedStudent()
+  const { student: dbStudent } = await getAuthenticatedStudent()
 
   const scenario = await prisma.scenario.findUnique({
     where: {
@@ -671,7 +674,7 @@ export async function submitAssessment(formData: FormData) {
 
   const dbStudent = await getOrCreateStudentProfile(user)
 
-  if (!scenario.isEnabled && !isAdminEmail(dbStudent.email)) {
+  if (!scenario.isEnabled && !isAdminUser(user)) {
     throw new Error('This scenario is currently closed')
   }
 

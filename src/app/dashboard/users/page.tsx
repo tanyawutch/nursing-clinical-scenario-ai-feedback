@@ -3,7 +3,7 @@ import {
   parseSubmittedSections,
   type FeedbackFormField,
 } from '@/app/components/PracticeFeedbackPanel'
-import { isAdminEmail, normalizeEmail } from '@/utils/authUser'
+import { isAdminEmail, isAdminUser, normalizeEmail } from '@/utils/authUser'
 import prisma from '@/utils/prisma'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getUserWithTimeout } from '@/utils/supabase/auth'
@@ -51,12 +51,14 @@ function getStatusCopy(status: string | undefined, lang: PageLanguage) {
       updated: 'บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้ว',
       deleted: 'ลบผู้ใช้งานเรียบร้อยแล้ว',
       reset: 'รีเซ็ตจำนวนครั้งของผู้ใช้งานเรียบร้อยแล้ว',
+      roleUpdated: 'อัปเดตสิทธิ์ผู้ใช้งานเรียบร้อยแล้ว',
     },
     en: {
       created: 'User created.',
       updated: 'User updated.',
       deleted: 'User deleted.',
       reset: 'User attempts reset.',
+      roleUpdated: 'User permissions updated.',
     },
   }[lang]
 
@@ -253,7 +255,7 @@ export default async function UsersPage({
     redirect(`/login?lang=${lang}`)
   }
 
-  if (!isAdminEmail(currentUser.email)) {
+  if (!isAdminUser(currentUser)) {
     redirect(`/dashboard?lang=${lang}`)
   }
 
@@ -315,6 +317,7 @@ export default async function UsersPage({
         authCreatedAt: authUser?.created_at ?? '',
         lastSignInAt: authUser?.last_sign_in_at ?? '',
         hasAuthAccount: Boolean(authUser),
+        isAdmin: Boolean(authUser && (isAdminEmail(authUser.email) || authUser.app_metadata?.role === 'admin')),
         history: student ? getAttemptHistory(student, lang) : [],
       }
     })

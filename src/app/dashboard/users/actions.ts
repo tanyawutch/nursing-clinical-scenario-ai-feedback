@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { isAdminEmail, normalizeEmail } from '@/utils/authUser'
+import { isAdminUser, normalizeEmail } from '@/utils/authUser'
 import prisma from '@/utils/prisma'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getUserWithTimeout } from '@/utils/supabase/auth'
@@ -31,7 +31,7 @@ async function requireAdmin(lang: PageLanguage) {
     redirect(`/login?lang=${lang}`)
   }
 
-  if (!isAdminEmail(user.email)) {
+  if (!isAdminUser(user)) {
     redirect(`/dashboard?lang=${lang}`)
   }
 
@@ -169,6 +169,37 @@ export async function updateManagedUser(formData: FormData) {
   }
 
   redirect(getRedirectPath(lang, 'updated'))
+}
+
+export async function setManagedUserRole(formData: FormData) {
+  const lang = getLang(formData)
+  const currentUser = await requireAdmin(lang)
+  const authUserId = String(formData.get('authUserId') ?? '').trim()
+  const role = String(formData.get('role') ?? 'student') === 'admin' ? 'admin' : 'student'
+
+  if (!authUserId) throw new Error('Auth user is missing')
+  if (authUserId === currentUser.id) {
+    throw new Error('You cannot change your own admin permission.')
+  }
+
+  const adminSupabase = createAdminClient()
+  const current = await adminSupabase.auth.admin.getUserById(authUserId)
+  if (current.error || !current.data.user) {
+    throw new Error(current.error?.message || 'User not found')
+  }
+
+  const appMetadata = { ...(current.data.user.app_metadata ?? {}) }
+  if (role === 'admin') appMetadata.role = 'admin'
+  else delete appMetadata.role
+
+  const { error } = await adminSupabase.auth.admin.updateUserById(authUserId, {
+    app_metadata: appMetadata,
+  })
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/dashboard/users')
+  redirect(getRedirectPath(lang, 'roleUpdated'))
 }
 
 export async function deleteManagedUser(formData: FormData) {

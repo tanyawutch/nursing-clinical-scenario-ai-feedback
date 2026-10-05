@@ -9,6 +9,7 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
+  Download,
   FileText,
   Globe,
   Lock,
@@ -110,6 +111,7 @@ export default function DashboardClient({
       opened: 'เปิด',
       profile: 'ประวัติ',
       users: 'ผู้ใช้งาน',
+      exportResults: 'ดาวน์โหลดผลทั้งหมด (Excel)',
     },
     en: {
       appTitle: 'PMC WeSmart',
@@ -142,6 +144,7 @@ export default function DashboardClient({
       opened: 'open',
       profile: 'History',
       users: 'Users',
+      exportResults: 'Download all results (Excel)',
     },
   }[lang]
 
@@ -371,6 +374,13 @@ export default function DashboardClient({
                   <Users className="h-3.5 w-3.5" />
                   <span>{copy.users}</span>
                 </Link>
+                <a
+                  href={`/dashboard/export?lang=${lang}`}
+                  className="hidden items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-100 md:flex"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>{copy.exportResults}</span>
+                </a>
                 <button
                   type="button"
                   onClick={() => setShowAdminPanel((value) => !value)}

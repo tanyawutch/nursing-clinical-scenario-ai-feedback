@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getUserWithTimeout } from '@/utils/supabase/auth'
 import {
   getOrCreateStudentProfile,
-  isAdminEmail,
+  isAdminUser,
   needsProfileSetup,
 } from '@/utils/authUser'
 
@@ -167,7 +167,7 @@ export default async function DashboardPage({
     <DashboardClient
       lang={lang}
       studentLabel={student.name || student.studentId}
-      isAdmin={isAdminEmail(user.email)}
+      isAdmin={isAdminUser(user)}
       scenarios={cards}
     />
   )

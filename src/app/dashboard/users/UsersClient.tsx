@@ -22,6 +22,7 @@ import {
   createManagedUser,
   deleteManagedUser,
   resetManagedUserAttempts,
+  setManagedUserRole,
   updateManagedUser,
 } from './actions'
 
@@ -63,6 +64,7 @@ export type ManagedUser = {
   authCreatedAt: string
   lastSignInAt: string
   hasAuthAccount: boolean
+  isAdmin: boolean
   history: ManagedAttemptHistory[]
 }
 
@@ -91,6 +93,11 @@ export default function UsersClient({
   managedUsers,
 }: UsersClientProps) {
   const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+  const totalPages = Math.max(Math.ceil(managedUsers.length / pageSize), 1)
+  const safePage = Math.min(currentPage, totalPages)
+  const visibleUsers = managedUsers.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const copy = {
     th: {
@@ -112,6 +119,10 @@ export default function UsersClient({
       exerciseAttempts: 'แบบฝึกหัด',
       lastLogin: 'เข้าสู่ระบบล่าสุด',
       view: 'ดูข้อมูล',
+      role: 'สิทธิ์',
+      admin: 'ผู้ดูแลระบบ',
+      student: 'ผู้ใช้งานทั่วไป',
+      saveRole: 'บันทึกสิทธิ์',
       edit: 'แก้ไขข้อมูล',
       newPassword: 'รหัสผ่านใหม่',
       blankPassword: 'เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยนรหัสผ่าน',
@@ -155,6 +166,10 @@ export default function UsersClient({
       exerciseAttempts: 'Practices',
       lastLogin: 'Last login',
       view: 'View',
+      role: 'Role',
+      admin: 'Administrator',
+      student: 'General user',
+      saveRole: 'Save role',
       edit: 'Edit user',
       newPassword: 'New password',
       blankPassword: 'Leave blank to keep current password.',
@@ -278,13 +293,14 @@ export default function UsersClient({
                     <th className="px-4 py-3">{copy.email}</th>
                     <th className="px-4 py-3">{copy.studentId}</th>
                     <th className="px-4 py-3">{copy.auth}</th>
+                    <th className="px-4 py-3">{copy.role}</th>
                     <th className="px-4 py-3">{copy.attempts}</th>
                     <th className="px-4 py-3">{copy.lastLogin}</th>
                     <th className="px-4 py-3 text-right">{copy.view}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {managedUsers.map((managedUser) => (
+                  {visibleUsers.map((managedUser) => (
                     <tr key={managedUser.key} className="align-middle">
                       <td className="px-4 py-4 font-black text-slate-950">
                         {managedUser.name || '-'}
@@ -307,6 +323,17 @@ export default function UsersClient({
                           }`}
                         >
                           {managedUser.hasAuthAccount ? copy.auth : copy.noAuth}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+                            managedUser.isAdmin
+                              ? 'border-purple-200 bg-purple-50 text-purple-700'
+                              : 'border-slate-200 bg-slate-50 text-slate-600'
+                          }`}
+                        >
+                          {managedUser.isAdmin ? copy.admin : copy.student}
                         </span>
                       </td>
                       <td className="px-4 py-4 text-xs text-slate-700">
@@ -341,6 +368,27 @@ export default function UsersClient({
               </table>
             </div>
           )}
+          {totalPages > 1 ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {Array.from({ length: totalPages }, (_, index) => {
+                const page = index + 1
+                return (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`h-9 min-w-9 rounded-lg border px-2 text-sm font-bold transition ${
+                      page === safePage
+                        ? 'border-[#F5821F] bg-[#F5821F] text-white'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-orange-300 hover:bg-orange-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
         </section>
       </div>
 
@@ -426,6 +474,33 @@ export default function UsersClient({
                       {copy.save}
                     </button>
                   </div>
+                </form>
+              </section>
+
+              <section className="mt-4 rounded-2xl border border-purple-200 bg-purple-50 p-4">
+                <h4 className="font-black text-purple-950">{copy.role}</h4>
+                <form action={setManagedUserRole} className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <input type="hidden" name="lang" value={lang} />
+                  <input type="hidden" name="authUserId" value={selectedUser.authUserId} />
+                  <label className="flex-1 text-xs font-bold text-purple-900">
+                    {copy.role}
+                    <select
+                      name="role"
+                      defaultValue={selectedUser.isAdmin ? 'admin' : 'student'}
+                      disabled={!selectedUser.authUserId}
+                      className={`mt-1 ${fieldClass()}`}
+                    >
+                      <option value="student">{copy.student}</option>
+                      <option value="admin">{copy.admin}</option>
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={!selectedUser.authUserId}
+                    className="rounded-xl bg-purple-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {copy.saveRole}
+                  </button>
                 </form>
               </section>
 

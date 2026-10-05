@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { getUserWithTimeout } from '@/utils/supabase/auth'
-import { getOrCreateStudentProfile, isAdminEmail } from '@/utils/authUser'
+import { getOrCreateStudentProfile, isAdminUser } from '@/utils/authUser'
 import prisma from '@/utils/prisma'
 
 const TEST_ATTEMPT_LIMIT = 1
@@ -46,7 +46,7 @@ export async function toggleScenarioAvailability(formData: FormData) {
     redirect(`/login?lang=${lang}`)
   }
 
-  if (!isAdminEmail(user.email)) {
+  if (!isAdminUser(user)) {
     throw new Error('Admin permission required')
   }
 
@@ -96,7 +96,7 @@ export async function startScenarioAttempt(formData: FormData) {
     throw new Error('Scenario not found')
   }
 
-  if (!scenario.isEnabled && !isAdminEmail(user.email)) {
+  if (!scenario.isEnabled && !isAdminUser(user)) {
     throw new Error('This scenario is currently closed')
   }
 

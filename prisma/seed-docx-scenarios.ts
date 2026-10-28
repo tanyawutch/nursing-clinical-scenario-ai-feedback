@@ -109,7 +109,6 @@ async function main() {
         bodySystem: scenarioSeed.bodySystem,
         description: scenarioSeed.description,
         scenarioKind: scenarioSeed.kind === "test" ? "test" : "exercise",
-        isEnabled: true,
         sortOrder: index + 1,
         rubric: scenarioSeed.rubric,
         requiredKeywords: cleanKeywordList(scenarioSeed.requiredKeywords),

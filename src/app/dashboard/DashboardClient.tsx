@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import {
   Activity,
@@ -108,6 +108,21 @@ export default function DashboardClient({
   )
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const [profileOpen, setProfileOpen] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!profileOpen) return
+
+    const handleOutsidePointerDown = (event: PointerEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setProfileOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handleOutsidePointerDown)
+    return () =>
+      document.removeEventListener('pointerdown', handleOutsidePointerDown)
+  }, [profileOpen])
 
   const copy = {
     th: {
@@ -401,7 +416,7 @@ export default function DashboardClient({
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <LanguageToggle lang={lang} pathname="/dashboard" />
-            <div className="relative">
+            <div ref={profileMenuRef} className="relative">
               <button
                 type="button"
                 onClick={() => setProfileOpen((value) => !value)}

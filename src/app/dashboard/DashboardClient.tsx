@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import { useFormStatus } from 'react-dom'
 import {
   Activity,
   Award,
@@ -64,6 +65,35 @@ const systemIcons = {
 
 function getSystemIcon(systemKey: string) {
   return systemIcons[systemKey as keyof typeof systemIcons] ?? BookOpen
+}
+
+function StartScenarioButton({
+  kind,
+  label,
+}: {
+  kind: ScenarioKind
+  label: string
+}) {
+  const { pending } = useFormStatus()
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black text-white shadow-md transition active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 ${
+        kind === 'test'
+          ? 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-700'
+          : 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
+      }`}
+    >
+      {pending ? (
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+      ) : (
+        <Play className="h-4 w-4 fill-white" />
+      )}
+      <span>{pending ? 'กำลังเปิดบทเรียน...' : label}</span>
+    </button>
+  )
 }
 
 export default function DashboardClient({
@@ -658,17 +688,10 @@ export default function DashboardClient({
               >
                 <input type="hidden" name="scenarioId" value={selectedScenario.id} />
                 <input type="hidden" name="lang" value={lang} />
-                <button
-                  type="submit"
-                  className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black text-white shadow-md transition active:scale-[0.98] ${
-                    selectedScenario.kind === 'test'
-                      ? 'bg-blue-600 shadow-blue-600/20 hover:bg-blue-700'
-                      : 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
-                  }`}
-                >
-                  <Play className="h-4 w-4 fill-white" />
-                  <span>{copy.confirmStart}</span>
-                </button>
+                <StartScenarioButton
+                  kind={selectedScenario.kind}
+                  label={copy.confirmStart}
+                />
               </form>
 
               <button

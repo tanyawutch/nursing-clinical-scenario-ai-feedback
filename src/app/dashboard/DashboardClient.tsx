@@ -457,7 +457,7 @@ export default function DashboardClient({
                       </span>
                     </div>
 
-                    {[test, practice].filter(Boolean).map((scenario) => (
+                    {[practice, test].filter(Boolean).map((scenario) => (
                       <form
                         key={scenario!.id}
                         action={toggleScenarioAvailability}
@@ -524,17 +524,6 @@ export default function DashboardClient({
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                <div className="min-w-[110px] rounded-xl border border-blue-200 bg-blue-50/70 px-3.5 py-2 text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                    {copy.testTrackLabel}
-                  </div>
-                  <div className="mt-0.5 text-lg font-black text-slate-900">
-                    {totalOpenTests}{' '}
-                    <span className="text-[10px] font-semibold text-slate-500">
-                      / 4 {copy.opened}
-                    </span>
-                  </div>
-                </div>
                 <div className="min-w-[110px] rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2 text-center">
                   <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
                     {copy.practiceTrackLabel}
@@ -546,13 +535,24 @@ export default function DashboardClient({
                     </span>
                   </div>
                 </div>
+                <div className="min-w-[110px] rounded-xl border border-blue-200 bg-blue-50/70 px-3.5 py-2 text-center">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                    {copy.testTrackLabel}
+                  </div>
+                  <div className="mt-0.5 text-lg font-black text-slate-900">
+                    {totalOpenTests}{' '}
+                    <span className="text-[10px] font-semibold text-slate-500">
+                      / 4 {copy.opened}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <TrackPanel type="test" items={testScenarios} />
             <TrackPanel type="exercise" items={practiceScenarios} />
+            <TrackPanel type="test" items={testScenarios} />
           </div>
         </div>
       </main>

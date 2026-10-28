@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { LogOut } from 'lucide-react'
 import { logout } from '@/app/logout/actions'
 
 type LogoutButtonProps = {
   lang: 'th' | 'en'
+  variant?: 'default' | 'menu'
 }
 
-export default function LogoutButton({ lang }: LogoutButtonProps) {
+export default function LogoutButton({ lang, variant = 'default' }: LogoutButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const copy = {
@@ -72,8 +74,13 @@ export default function LogoutButton({ lang }: LogoutButtonProps) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#F5821F]/40 hover:bg-[#FFF4E8] hover:text-[#F5821F] sm:text-sm"
+        className={
+          variant === 'menu'
+            ? 'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-600 transition hover:bg-red-50'
+            : 'inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#F5821F]/40 hover:bg-[#FFF4E8] hover:text-[#F5821F] sm:text-sm'
+        }
       >
+        {variant === 'menu' ? <LogOut className="h-4 w-4 shrink-0" /> : null}
         {copy.button}
       </button>
 

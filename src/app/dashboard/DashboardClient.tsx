@@ -12,7 +12,7 @@ import {
   Clock,
   Download,
   FileText,
-  Globe,
+  History,
   Lock,
   Play,
   Settings,
@@ -22,7 +22,7 @@ import {
   Stethoscope,
   Thermometer,
   Unlock,
-  User,
+  UserCircle,
   Users,
   Wind,
   X,
@@ -107,6 +107,7 @@ export default function DashboardClient({
     null
   )
   const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const [profileOpen, setProfileOpen] = useState(false)
 
   const copy = {
     th: {
@@ -375,67 +376,99 @@ export default function DashboardClient({
 
       <header className="shrink-0 border-b border-slate-200 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur-md lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F5821F] text-xs font-black text-white shadow-md shadow-[#F5821F]/20">
+          <Link
+            href={`/dashboard?lang=${lang}`}
+            className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5821F]"
+            aria-label={copy.appTitle}
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F5821F] text-xs font-black text-white shadow-md shadow-[#F5821F]/20">
               MFU
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-black tracking-tight text-slate-900">
+                <h1 className="truncate text-base font-black tracking-tight text-slate-900">
                   {copy.appTitle}
                 </h1>
                 <span className="rounded-md border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-[#F5821F]">
                   v2.0
                 </span>
               </div>
-              <p className="line-clamp-1 text-[11px] font-medium text-slate-500">
+              <p className="line-clamp-1 max-w-[15rem] text-[11px] font-medium text-slate-500 sm:max-w-none">
                 {copy.appSubtitle}
               </p>
             </div>
-          </div>
+          </Link>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {isAdmin ? (
-              <>
-                <Link
-                  href={`/dashboard/users?lang=${lang}`}
-                  className="hidden items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-[#F5821F]/40 hover:bg-orange-50 hover:text-[#F5821F] md:flex"
-                >
-                  <Users className="h-3.5 w-3.5" />
-                  <span>{copy.users}</span>
-                </Link>
-                <a
-                  href={`/dashboard/export?lang=${lang}`}
-                  className="hidden items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-100 md:flex"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>{copy.exportResults}</span>
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setShowAdminPanel((value) => !value)}
-                  className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold shadow-sm transition ${
-                    showAdminPanel
-                      ? 'border-purple-300 bg-purple-600 text-white shadow-purple-600/20'
-                      : 'border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100'
-                  }`}
-                >
-                  <Settings className="h-3.5 w-3.5" />
-                  <span>{copy.adminToggleBtn}</span>
-                </button>
-              </>
-            ) : null}
-
-            <Link
-              href={`/dashboard/history?lang=${lang}`}
-              className="hidden items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-bold text-[#F5821F] sm:flex"
-            >
-              <User className="h-3.5 w-3.5" />
-              <span>{studentLabel}</span>
-            </Link>
-
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <LanguageToggle lang={lang} pathname="/dashboard" />
-            <LogoutButton lang={lang} />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileOpen((value) => !value)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:border-[#F5821F]/50 hover:bg-orange-50 hover:text-[#F5821F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5821F]"
+                aria-label={lang === 'th' ? 'เปิดเมนูโปรไฟล์' : 'Open profile menu'}
+                aria-expanded={profileOpen}
+              >
+                <UserCircle className="h-5 w-5" />
+              </button>
+
+              {profileOpen ? (
+                <div className="absolute right-0 top-12 z-50 w-[min(17rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+                  <div className="border-b border-slate-100 px-3 py-2.5">
+                    <p className="text-[11px] font-semibold text-slate-500">
+                      {lang === 'th' ? 'ผู้ใช้งาน' : 'Signed in as'}
+                    </p>
+                    <p className="mt-0.5 truncate text-sm font-black text-slate-900">
+                      {studentLabel}
+                    </p>
+                  </div>
+                  <div className="mt-1 space-y-0.5">
+                    <Link
+                      href={`/dashboard/history?lang=${lang}`}
+                      onClick={() => setProfileOpen(false)}
+                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-orange-600 transition hover:bg-orange-50"
+                    >
+                      <History className="h-4 w-4 shrink-0" />
+                      {copy.profile}
+                    </Link>
+                    {isAdmin ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAdminPanel((value) => !value)
+                            setProfileOpen(false)
+                          }}
+                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-purple-700 transition hover:bg-purple-50"
+                        >
+                          <Settings className="h-4 w-4 shrink-0" />
+                          {copy.adminToggleBtn}
+                        </button>
+                        <Link
+                          href={`/dashboard/users?lang=${lang}`}
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          <Users className="h-4 w-4 shrink-0" />
+                          {copy.users}
+                        </Link>
+                        <a
+                          href={`/dashboard/export?lang=${lang}`}
+                          onClick={() => setProfileOpen(false)}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50"
+                        >
+                          <Download className="h-4 w-4 shrink-0" />
+                          {lang === 'th' ? 'ดาวน์โหลด Excel' : 'Download Excel'}
+                        </a>
+                      </>
+                    ) : null}
+                    <div className="my-1 border-t border-slate-100 pt-1">
+                      <LogoutButton lang={lang} variant="menu" />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>

@@ -374,7 +374,7 @@ export default function DashboardClient({
         </div>
       ) : null}
 
-      <header className="shrink-0 border-b border-slate-200 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur-md lg:px-8">
+      <header className="relative z-[100] shrink-0 border-b border-slate-200 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur-md lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <Link
             href={`/dashboard?lang=${lang}`}

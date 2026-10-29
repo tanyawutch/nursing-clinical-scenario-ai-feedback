@@ -55,6 +55,10 @@ export default function AppHeader({
     if (!profileOpen) return
 
     const handleOutsidePointerDown = (event: PointerEvent) => {
+      if ((event.target as HTMLElement).closest('[data-logout-modal="true"]')) {
+        return
+      }
+
       if (!profileMenuRef.current?.contains(event.target as Node)) {
         setProfileOpen(false)
       }

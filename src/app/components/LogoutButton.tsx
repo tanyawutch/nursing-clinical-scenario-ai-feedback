@@ -34,7 +34,10 @@ export default function LogoutButton({ lang, variant = 'default' }: LogoutButton
   }, [])
 
   const modal = isOpen ? (
-    <div className="fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm">
+    <div
+      data-logout-modal="true"
+      className="fixed inset-0 z-[9999] flex min-h-dvh items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
+    >
       <div
         role="dialog"
         aria-modal="true"

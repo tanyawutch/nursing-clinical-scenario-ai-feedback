@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import LanguageToggle from '@/app/components/LanguageToggle'
-import LogoutButton from '@/app/components/LogoutButton'
+import AppHeader from '@/app/components/AppHeader'
 import AttemptTimer from './AttemptTimer'
 import ScenarioStepPractice from './ScenarioStepPractice'
 import prisma from '@/utils/prisma'
@@ -10,6 +9,7 @@ import { getUserWithTimeout } from '@/utils/supabase/auth'
 import {
   getOrCreateStudentProfile,
   isAdminEmail,
+  isAdminUser,
   needsProfileSetup,
 } from '@/utils/authUser'
 
@@ -289,45 +289,36 @@ export default async function AssessmentPage({
 
   return (
     <div className="min-h-screen bg-slate-100 pb-12 font-sans text-slate-950">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
-          <Link
-            href={`/dashboard?lang=${lang}`}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#F5821F] transition-colors hover:text-[#D96F14]"
-          >
-            <span aria-hidden="true">←</span>
-            {copy.back}
-          </Link>
-
-            <div className="flex items-center gap-3">
-              {shouldShowTestTimer ? (
-                <AttemptTimer
-                  lang={lang}
-                  startedAt={activeAttempt?.startedAt.toISOString() ?? null}
-                  completedAt={activeAttempt?.completedAt?.toISOString() ?? null}
-                  timeLimitSeconds={
-                    activeAttempt?.timeLimitSeconds ?? TEST_TIME_LIMIT_SECONDS
-                  }
-                />
-              ) : null}
-              <div className="hidden items-center gap-3 sm:flex">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#F5821F]" />
+      <AppHeader
+        lang={lang}
+        studentLabel={student.name || student.studentId}
+        isAdmin={isAdminUser(user)}
+        pathname={`/dashboard/scenario/${scenario.id}`}
+        searchParams={{
+          attemptId: resolvedSearchParams.attemptId,
+          stepId: targetStep?.id,
+        }}
+        rightSlot={
+          <>
+            {shouldShowTestTimer ? (
+              <AttemptTimer
+                lang={lang}
+                startedAt={activeAttempt?.startedAt.toISOString() ?? null}
+                completedAt={activeAttempt?.completedAt?.toISOString() ?? null}
+                timeLimitSeconds={
+                  activeAttempt?.timeLimitSeconds ?? TEST_TIME_LIMIT_SECONDS
+                }
+              />
+            ) : null}
+            <div className="hidden items-center gap-3 sm:flex">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#F5821F]" />
               <span className="text-sm font-semibold text-slate-800">
                 {copy.assessment}
               </span>
             </div>
-            <LanguageToggle
-              lang={lang}
-              pathname={`/dashboard/scenario/${scenario.id}`}
-              searchParams={{
-                attemptId: resolvedSearchParams.attemptId,
-                stepId: targetStep?.id,
-              }}
-            />
-            <LogoutButton lang={lang} />
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <main className="mx-auto mt-6 w-full max-w-[1440px] space-y-6 px-5 sm:px-8 lg:px-10">
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

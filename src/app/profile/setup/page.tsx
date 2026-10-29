@@ -55,9 +55,11 @@ export default async function ProfileSetupPage({
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4 font-sans text-slate-950">
       <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
         <div className="mb-7">
-          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F5821F] text-sm font-black text-white">
-            MFU
-          </div>
+          <img
+            src="/brand/pmc-wesmart-horizontal.png"
+            alt="PMC WeSmart"
+            className="mb-5 h-auto max-h-20 w-full max-w-[21rem] object-contain object-left"
+          />
           <h1 className="text-2xl font-black tracking-tight">{copy.title}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             {copy.subtitle}

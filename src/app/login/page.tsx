@@ -13,6 +13,7 @@ export default async function LoginPage(props: {
   const searchParams = await props.searchParams
   const lang = resolveLanguage(searchParams?.lang)
   const error = searchParams?.error
+  const isThai = lang === 'th'
 
   const copy = {
     th: {
@@ -56,18 +57,17 @@ export default async function LoginPage(props: {
 
         <div className="space-y-2 text-center">
           <div className="mb-4 flex justify-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#d4af37] bg-[#C2410C]">
-              <span className="text-xl font-bold text-[#d4af37]">MFU</span>
-            </div>
+            <img
+              src="/brand/pmc-wesmart-horizontal.png"
+              alt="PMC WeSmart"
+              className="h-auto max-h-24 w-full max-w-[22rem] object-contain"
+            />
           </div>
-          <h1 className="text-2xl font-bold uppercase tracking-wide text-[#C2410C]">
-            Mae Fah Luang
-          </h1>
-          <h2 className="text-lg font-semibold text-gray-700">
-            {copy.school}
-          </h2>
           <p className="mt-2 text-sm font-medium text-gray-500">
             {copy.system}
+          </p>
+          <p className="text-sm font-semibold text-gray-700">
+            {isThai ? 'สำนักวิชาพยาบาลศาสตร์ มหาวิทยาลัยแม่ฟ้าหลวง' : 'School of Nursing, Mae Fah Luang University'}
           </p>
         </div>
 

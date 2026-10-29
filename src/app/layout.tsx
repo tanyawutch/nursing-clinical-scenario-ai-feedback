@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PMC WeSmart",
   description: "Clinical scenario learning and assessment platform",
+  icons: {
+    icon: "/brand/pmc-wesmart-icon.png",
+    shortcut: "/brand/pmc-wesmart-icon.png",
+    apple: "/brand/pmc-wesmart-icon.png",
+  },
 };
 
 export default function RootLayout({

@@ -14,7 +14,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
-import LogoutButton from '@/app/components/LogoutButton'
+import AppHeader from '@/app/components/AppHeader'
 import PracticeFeedbackPanel, {
   type SubmittedAnswerSection,
 } from '@/app/components/PracticeFeedbackPanel'
@@ -70,6 +70,7 @@ export type ManagedUser = {
 
 type UsersClientProps = {
   lang: PageLanguage
+  studentLabel: string
   statusCopy: string
   managedUsers: ManagedUser[]
 }
@@ -89,6 +90,7 @@ function formatDate(value: string, lang: PageLanguage) {
 
 export default function UsersClient({
   lang,
+  studentLabel,
   statusCopy,
   managedUsers,
 }: UsersClientProps) {
@@ -199,6 +201,12 @@ export default function UsersClient({
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
+        <AppHeader
+          lang={lang}
+          studentLabel={studentLabel}
+          isAdmin
+          pathname="/dashboard/users"
+        />
         <header className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center">
           <div>
             <Link
@@ -218,7 +226,6 @@ export default function UsersClient({
               </div>
             </div>
           </div>
-          <LogoutButton lang={lang} />
         </header>
 
         {statusCopy ? (

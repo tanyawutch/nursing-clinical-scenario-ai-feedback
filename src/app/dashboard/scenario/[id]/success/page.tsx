@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import LogoutButton from '@/app/components/LogoutButton'
+import AppHeader from '@/app/components/AppHeader'
 import { createClient } from '@/utils/supabase/server'
 import { getUserWithTimeout } from '@/utils/supabase/auth'
 import prisma from '@/utils/prisma'
-import { getOrCreateStudentProfile, needsProfileSetup } from '@/utils/authUser'
+import { getOrCreateStudentProfile, isAdminUser, needsProfileSetup } from '@/utils/authUser'
 
 type SuccessPageProps = {
   searchParams: Promise<{
@@ -187,30 +187,17 @@ export default async function SuccessPage({ searchParams }: SuccessPageProps) {
 
   return (
     <main className="min-h-screen bg-[#f8f9fa] text-slate-900 pb-20 font-sans">
-      {/* ─── Header ─── */}
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white shadow-sm">
-        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 text-sm font-bold text-slate-600 transition-colors hover:text-slate-900"
-            >
-              <span aria-hidden="true">←</span>
-              Back
-            </Link>
-            <div className="h-4 w-[1px] bg-slate-300"></div>
-            <p className="text-sm font-bold text-slate-900">
-              {attempt.scenario?.title ?? 'Clinical Scenario Learning'}
-            </p>
-          </div>
-          <div className="hidden sm:block text-sm font-semibold text-slate-500">
-            <div className="flex items-center gap-3">
-              <span>Practice Assessment Feedback</span>
-              <LogoutButton lang="en" />
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        lang="en"
+        studentLabel={student.name || student.studentId}
+        isAdmin={isAdminUser(user)}
+        pathname="/dashboard/scenario/success"
+        rightSlot={
+          <span className="hidden text-sm font-semibold text-slate-500 sm:inline">
+            Practice Assessment Feedback
+          </span>
+        }
+      />
 
       {/* ─── Coursera-style Top Verdict Banner ─── */}
       <div className={`w-full ${bannerBg} py-6 sm:py-8`}>

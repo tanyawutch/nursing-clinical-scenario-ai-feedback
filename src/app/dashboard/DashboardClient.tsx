@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import {
   Activity,
@@ -10,25 +9,19 @@ import {
   ChevronRight,
   CheckCircle2,
   Clock,
-  Download,
   FileText,
-  History,
   Lock,
   Play,
-  Settings,
   ShieldCheck,
   Sliders,
   Sparkles,
   Stethoscope,
   Thermometer,
   Unlock,
-  UserCircle,
-  Users,
   Wind,
   X,
 } from 'lucide-react'
-import LanguageToggle from '@/app/components/LanguageToggle'
-import LogoutButton from '@/app/components/LogoutButton'
+import AppHeader from '@/app/components/AppHeader'
 import { startScenarioAttempt, toggleScenarioAvailability } from './actions'
 
 type PageLanguage = 'th' | 'en'
@@ -107,23 +100,6 @@ export default function DashboardClient({
     null
   )
   const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const profileMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!profileOpen) return
-
-    const handleOutsidePointerDown = (event: PointerEvent) => {
-      if (!profileMenuRef.current?.contains(event.target as Node)) {
-        setProfileOpen(false)
-      }
-    }
-
-    document.addEventListener('pointerdown', handleOutsidePointerDown)
-    return () =>
-      document.removeEventListener('pointerdown', handleOutsidePointerDown)
-  }, [profileOpen])
-
   const copy = {
     th: {
       appTitle: 'PMC WeSmart',
@@ -389,104 +365,14 @@ export default function DashboardClient({
         </div>
       ) : null}
 
-      <header className="relative z-[100] shrink-0 border-b border-slate-200 bg-white/90 px-4 py-2.5 shadow-sm backdrop-blur-md lg:px-8">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link
-            href={`/dashboard?lang=${lang}`}
-            className="flex min-w-0 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5821F]"
-            aria-label={copy.appTitle}
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F5821F] text-xs font-black text-white shadow-md shadow-[#F5821F]/20">
-              MFU
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h1 className="truncate text-base font-black tracking-tight text-slate-900">
-                  {copy.appTitle}
-                </h1>
-                <span className="rounded-md border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-[#F5821F]">
-                  v2.0
-                </span>
-              </div>
-              <p className="line-clamp-1 max-w-[15rem] text-[11px] font-medium text-slate-500 sm:max-w-none">
-                {copy.appSubtitle}
-              </p>
-            </div>
-          </Link>
-
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <LanguageToggle lang={lang} pathname="/dashboard" />
-            <div ref={profileMenuRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setProfileOpen((value) => !value)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:border-[#F5821F]/50 hover:bg-orange-50 hover:text-[#F5821F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5821F]"
-                aria-label={lang === 'th' ? 'เปิดเมนูโปรไฟล์' : 'Open profile menu'}
-                aria-expanded={profileOpen}
-              >
-                <UserCircle className="h-5 w-5" />
-              </button>
-
-              {profileOpen ? (
-                <div className="absolute right-0 top-12 z-50 w-[min(17rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
-                  <div className="border-b border-slate-100 px-3 py-2.5">
-                    <p className="text-[11px] font-semibold text-slate-500">
-                      {lang === 'th' ? 'ผู้ใช้งาน' : 'Signed in as'}
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-black text-slate-900">
-                      {studentLabel}
-                    </p>
-                  </div>
-                  <div className="mt-1 space-y-0.5">
-                    <Link
-                      href={`/dashboard/history?lang=${lang}`}
-                      onClick={() => setProfileOpen(false)}
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-orange-600 transition hover:bg-orange-50"
-                    >
-                      <History className="h-4 w-4 shrink-0" />
-                      {copy.profile}
-                    </Link>
-                    {isAdmin ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowAdminPanel((value) => !value)
-                            setProfileOpen(false)
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-purple-700 transition hover:bg-purple-50"
-                        >
-                          <Settings className="h-4 w-4 shrink-0" />
-                          {copy.adminToggleBtn}
-                        </button>
-                        <Link
-                          href={`/dashboard/users?lang=${lang}`}
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <Users className="h-4 w-4 shrink-0" />
-                          {copy.users}
-                        </Link>
-                        <a
-                          href={`/dashboard/export?lang=${lang}`}
-                          onClick={() => setProfileOpen(false)}
-                          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50"
-                        >
-                          <Download className="h-4 w-4 shrink-0" />
-                          {lang === 'th' ? 'ดาวน์โหลด Excel' : 'Download Excel'}
-                        </a>
-                      </>
-                    ) : null}
-                    <div className="my-1 border-t border-slate-100 pt-1">
-                      <LogoutButton lang={lang} variant="menu" />
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        lang={lang}
+        studentLabel={studentLabel}
+        isAdmin={isAdmin}
+        pathname="/dashboard"
+        adminPanelOpen={showAdminPanel}
+        onToggleAdminPanel={() => setShowAdminPanel((value) => !value)}
+      />
 
       {isAdmin && showAdminPanel ? (
         <section className="shrink-0 border-b border-purple-200 bg-purple-50/95 px-4 py-3.5 text-slate-800 shadow-md lg:px-8">

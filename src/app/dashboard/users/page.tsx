@@ -3,7 +3,12 @@ import {
   parseSubmittedSections,
   type FeedbackFormField,
 } from '@/app/components/PracticeFeedbackPanel'
-import { isAdminEmail, isAdminUser, normalizeEmail } from '@/utils/authUser'
+import {
+  getOrCreateStudentProfile,
+  isAdminEmail,
+  isAdminUser,
+  normalizeEmail,
+} from '@/utils/authUser'
 import prisma from '@/utils/prisma'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getUserWithTimeout } from '@/utils/supabase/auth'
@@ -259,6 +264,8 @@ export default async function UsersPage({
     redirect(`/dashboard?lang=${lang}`)
   }
 
+  const currentStudent = await getOrCreateStudentProfile(currentUser)
+
   const [students, authUsersResult] = await Promise.all([
     getStudentsWithHistory(),
     createAdminClient().auth.admin.listUsers({
@@ -326,6 +333,7 @@ export default async function UsersPage({
   return (
     <UsersClient
       lang={lang}
+      studentLabel={currentStudent.name || currentStudent.studentId}
       statusCopy={getStatusCopy(resolvedSearchParams.status, lang)}
       managedUsers={managedUsers}
     />

@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import LanguageToggle from '@/app/components/LanguageToggle'
-import LogoutButton from '@/app/components/LogoutButton'
+import AppHeader from '@/app/components/AppHeader'
 import prisma from '@/utils/prisma'
 import { createClient } from '@/utils/supabase/server'
 import { getUserWithTimeout } from '@/utils/supabase/auth'
 import { getOrCreateStudentProfile, needsProfileSetup } from '@/utils/authUser'
+import { isAdminUser } from '@/utils/authUser'
 
 type PageLanguage = 'th' | 'en'
 
@@ -102,21 +102,12 @@ export default async function PracticeHistoryPage({
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] font-sans text-slate-950">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
-          <Link
-            href={`/dashboard?lang=${lang}`}
-            className="inline-flex items-center gap-2 text-sm font-bold text-[#F5821F] transition hover:text-[#D96F14]"
-          >
-            <span aria-hidden="true">←</span>
-            {copy.back}
-          </Link>
-          <div className="flex items-center gap-3">
-            <LanguageToggle lang={lang} pathname="/dashboard/history" />
-            <LogoutButton lang={lang} />
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        lang={lang}
+        studentLabel={student.name || student.studentId}
+        isAdmin={isAdminUser(user)}
+        pathname="/dashboard/history"
+      />
 
       <main className="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 lg:px-10">
         <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">

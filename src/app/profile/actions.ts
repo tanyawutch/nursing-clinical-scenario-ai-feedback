@@ -4,16 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 import { getOrCreateStudentProfile } from '@/utils/authUser'
 import prisma from '@/utils/prisma'
-
-export type UpdateDisplayNameState = {
-  ok: boolean
-  error: string
-}
-
-export const initialUpdateDisplayNameState: UpdateDisplayNameState = {
-  ok: false,
-  error: '',
-}
+import type { UpdateDisplayNameState } from './types'
 
 export async function updateDisplayName(
   _previousState: UpdateDisplayNameState,

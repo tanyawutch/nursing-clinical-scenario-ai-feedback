@@ -15,9 +15,9 @@ import {
 import LanguageToggle from './LanguageToggle'
 import LogoutButton from './LogoutButton'
 import {
-  initialUpdateDisplayNameState,
   updateDisplayName,
 } from '@/app/profile/actions'
+import { initialUpdateDisplayNameState } from '@/app/profile/types'
 
 type PageLanguage = 'th' | 'en'
 

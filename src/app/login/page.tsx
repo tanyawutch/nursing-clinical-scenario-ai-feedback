@@ -17,8 +17,7 @@ export default async function LoginPage(props: {
 
   const copy = {
     th: {
-      school: 'สำนักวิชาพยาบาลศาสตร์',
-      system: 'PMC WeSmart ระบบฝึกทักษะการซักประวัติผู้ป่วยผ่านสถานการณ์จำลอง',
+      system: 'ระบบฝึกทักษะการซักประวัติผู้ป่วยผ่านสถานการณ์จำลอง',
       email: 'อีเมล',
       emailPlaceholder: 'กรอกอีเมลของคุณ',
       password: 'รหัสผ่าน',
@@ -30,8 +29,7 @@ export default async function LoginPage(props: {
       footer: 'มหาวิทยาลัยแม่ฟ้าหลวง',
     },
     en: {
-      school: 'School of Nursing',
-      system: 'PMC WeSmart Clinical Scenario Simulation Platform',
+      system: 'Clinical Scenario Simulation Platform',
       email: 'Email',
       emailPlaceholder: 'Enter your email',
       password: 'Password',

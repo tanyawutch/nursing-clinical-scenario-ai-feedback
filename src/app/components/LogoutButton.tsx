@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { LogOut } from 'lucide-react'
-import { logout } from '@/app/logout/actions'
 
 type LogoutButtonProps = {
   lang: 'th' | 'en'
@@ -55,7 +54,7 @@ export default function LogoutButton({ lang, variant = 'default' }: LogoutButton
           >
             {copy.cancel}
           </button>
-          <form action={logout}>
+          <form action="/api/logout" method="post">
             <input type="hidden" name="lang" value={lang} />
             <button
               type="submit"
